@@ -25,13 +25,12 @@ typedef Range<const char*> StringPiece;
 
 namespace rsocket {
 
+constexpr int64_t kMaxRequestN = std::numeric_limits<int32_t>::max();
+
 enum class FrameType : uint8_t;
 
 std::string to_string(FrameType);
 std::ostream& operator<<(std::ostream&, FrameType);
-
-using ErrorCallback =
-    std::function<void(const folly::exception_wrapper&) noexcept>;
 
 using StreamId = uint32_t;
 

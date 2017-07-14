@@ -3,6 +3,7 @@
 #pragma once
 
 #include <folly/io/async/AsyncServerSocket.h>
+
 #include "src/ConnectionAcceptor.h"
 
 namespace folly {
@@ -19,7 +20,7 @@ namespace rsocket {
 class TcpConnectionAcceptor : public ConnectionAcceptor {
  public:
   struct Options {
-    explicit Options(uint16_t port_ = 8080, size_t threads_ = 1,
+    explicit Options(uint16_t port_ = 8080, size_t threads_ = 2,
                      int backlog_ = 10) : port(port_), threads(threads_),
                                           backlog(backlog_) {}
 
@@ -45,15 +46,17 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
   /**
    * Bind an AsyncServerSocket and start accepting TCP connections.
    */
-  folly::Future<folly::Unit> start(
-      std::function<
-          void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>)
-      override;
+  void start(OnDuplexConnectionAccept) override;
 
   /**
    * Shutdown the AsyncServerSocket and associated listener thread.
    */
   void stop() override;
+
+  /**
+   * Get the port being listened on.
+   */
+  folly::Optional<uint16_t> listeningPort() const override;
 
  private:
   class SocketCallback;
@@ -65,9 +68,7 @@ class TcpConnectionAcceptor : public ConnectionAcceptor {
   /// thread.
   std::vector<std::unique_ptr<SocketCallback>> callbacks_;
 
-  std::function<
-      void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>
-      onAccept_;
+  OnDuplexConnectionAccept onAccept_;
 
   /// The socket listening for new connections.
   folly::AsyncServerSocket::UniquePtr serverSocket_;

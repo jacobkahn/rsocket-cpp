@@ -1,10 +1,14 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <algorithm>
 #include <limits>
 #include <vector>
 
-#include "Flowable.h"
+#include <glog/logging.h>
+
+#include "yarpl/flowable/Flowable.h"
 
 namespace yarpl {
 namespace flowable {
@@ -12,11 +16,7 @@ namespace flowable {
 class Flowables {
  public:
   /**
-   * Emit a sequence of numbers.
-   *
-   * @param start starting value
-   * @param count how many to emit
-   * @return
+   * Emit the sequence of numbers [start, start + count).
    */
   static Reference<Flowable<int64_t>> range(int64_t start, int64_t count) {
     auto lambda = [ start, count, i = start ](
@@ -78,6 +78,26 @@ class Flowables {
     return Flowable<T>::create(std::move(lambda));
   }
 
+  // this will generate a flowable which can be subscribed to only once
+  template <typename T>
+  static Reference<Flowable<T>> justOnce(T value) {
+    auto lambda = [value = std::move(value), used = false](Subscriber<T>& subscriber, int64_t) mutable {
+      if (used) {
+        subscriber.onError(
+            std::make_exception_ptr(std::runtime_error("justOnce value was already used")));
+        return std::make_tuple(static_cast<int64_t>(0), true);
+      }
+
+      used = true;
+      // # requested should be > 0.  Ignoring the actual parameter.
+      subscriber.onNext(std::move(value));
+      subscriber.onComplete();
+      return std::make_tuple(static_cast<int64_t>(1), true);
+    };
+
+    return Flowable<T>::create(std::move(lambda));
+  }
+
   template <
       typename T,
       typename OnSubscribe,
@@ -130,7 +150,7 @@ class Flowables {
       } catch(...) {
         subscriber.onError(std::current_exception());
         return std::make_tuple(generated, true);
-      } 
+      }
     };
     return Flowable<T>::create(std::move(lambda));
   }

@@ -19,9 +19,6 @@ using namespace reactivestreams_yarpl;
  * The Handler class is *just* the onSubscribe func. The real lifetime
  * is in the Subscription which the Handler kicks off via a 'new' to
  * put on the heap.
- *
- * @param scheduler
- * @param subscriber
  */
 static auto runHandlerFlowable(Scheduler& scheduler) {
   class Handler {
@@ -76,7 +73,7 @@ TEST(FlowableLifecycle, DISABLED_HandlerClass) {
       std::cout << "onComplete " << std::endl;
     }
 
-    void onError(const std::exception_ptr error) {
+    void onError(std::exception_ptr) {
       std::cout << "onError " << std::endl;
     }
 

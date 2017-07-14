@@ -6,6 +6,7 @@
 #include <mutex>
 #include <sstream>
 #include <vector>
+
 #include "yarpl/Observable.h"
 
 namespace yarpl {
@@ -65,7 +66,7 @@ class TestObserver : public yarpl::observable::Observer<T>,
   void onSubscribe(Subscription* s) override;
   void onNext(const T& t) override;
   void onComplete() override;
-  void onError(const std::exception_ptr ex) override;
+  void onError(std::exception_ptr ex) override;
 
   /**
    * Get a unique Observer<T> that can be passed into the Observable.subscribe
@@ -88,8 +89,6 @@ class TestObserver : public yarpl::observable::Observer<T>,
   /**
    * If the onNext values received does not match the given count,
    * throw a runtime_error
-   *
-   * @param count
    */
   void assertValueCount(size_t count);
 
@@ -103,9 +102,6 @@ class TestObserver : public yarpl::observable::Observer<T>,
    * Get a reference to a stored value at a given index position.
    *
    * The values are stored in the order received from onNext.
-   *
-   * @param index
-   * @return
    */
   T& getValueAt(size_t index);
 
@@ -179,7 +175,7 @@ void TestObserver<T>::onComplete() {
 }
 
 template <typename T>
-void TestObserver<T>::onError(const std::exception_ptr ex) {
+void TestObserver<T>::onError(std::exception_ptr ex) {
   if (delegate_) {
     delegate_->onError(ex);
   }
@@ -216,7 +212,7 @@ TestObserver<T>::unique_observer() {
       ts_->onNext(t);
     }
 
-    void onError(const std::exception_ptr e) override {
+    void onError(std::exception_ptr e) override {
       ts_->onError(e);
     }
 

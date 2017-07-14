@@ -17,7 +17,7 @@ class TestHandlerSync : public rsocket::RSocketResponder {
  public:
   Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
-      StreamId streamId) override {
+      StreamId) override {
     // string from payload data
     auto requestString = request.moveDataToString();
 
@@ -31,10 +31,9 @@ class TestHandlerSync : public rsocket::RSocketResponder {
   }
 };
 
-TEST(RequestStreamTest, DISABLED_HelloSync) {
-  auto port = randPort();
-  auto server = makeServer(port, std::make_shared<TestHandlerSync>());
-  auto client = makeClient(port);
+TEST(RequestStreamTest, HelloSync) {
+  auto server = makeServer(std::make_shared<TestHandlerSync>());
+  auto client = makeClient(*server->listeningPort());
   auto requester = client->connect().get();
   auto ts = TestSubscriber<std::string>::create();
   requester->requestStream(Payload("Bob"))
@@ -51,7 +50,7 @@ class TestHandlerAsync : public rsocket::RSocketResponder {
  public:
   Reference<Flowable<Payload>> handleRequestStream(
       Payload request,
-      StreamId streamId) override {
+      StreamId) override {
     // string from payload data
     auto requestString = request.moveDataToString();
 
@@ -76,10 +75,9 @@ class TestHandlerAsync : public rsocket::RSocketResponder {
 };
 }
 
-TEST(RequestStreamTest, DISABLED_HelloAsync) {
-  auto port = randPort();
-  auto server = makeServer(port, std::make_shared<TestHandlerAsync>());
-  auto client = makeClient(port);
+TEST(RequestStreamTest, HelloAsync) {
+  auto server = makeServer(std::make_shared<TestHandlerAsync>());
+  auto client = makeClient(*server->listeningPort());
   auto requester = client->connect().get();
   auto ts = TestSubscriber<std::string>::create();
   requester->requestStream(Payload("Bob"))

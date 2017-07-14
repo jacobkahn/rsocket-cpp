@@ -2,12 +2,14 @@
 
 #pragma once
 
-#include <folly/ExceptionWrapper.h>
-#include <yarpl/Refcounted.h>
 #include <functional>
 #include <iosfwd>
 #include <memory>
+
+#include <folly/ExceptionWrapper.h>
+
 #include "src/internal/Common.h"
+#include "yarpl/Refcounted.h"
 
 namespace folly {
 class IOBuf;
@@ -16,7 +18,6 @@ class IOBuf;
 namespace rsocket {
 
 class StreamsWriter;
-class RequestHandler;
 struct Payload;
 
 ///
@@ -61,8 +62,8 @@ class StreamStateMachineBase : public virtual yarpl::Refcounted {
   virtual void endStream(StreamCompletionSignal signal);
   /// @}
 
-  virtual void pauseStream(RequestHandler& requestHandler) = 0;
-  virtual void resumeStream(RequestHandler& requestHandler) = 0;
+//  virtual void pauseStream(RequestHandler& requestHandler) = 0;
+//  virtual void resumeStream(RequestHandler& requestHandler) = 0;
 
  protected:
   bool isTerminated() const {

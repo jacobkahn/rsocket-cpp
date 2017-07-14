@@ -6,7 +6,6 @@
 
 #include "src/statemachine/ConsumerBase.h"
 #include "src/statemachine/PublisherBase.h"
-#include "src/temporary_home/SubscriberBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {
@@ -28,7 +27,7 @@ class ChannelResponder : public ConsumerBase,
                        subscription) noexcept override;
   void onNext(Payload) noexcept override;
   void onComplete() noexcept override;
-  void onError(const std::exception_ptr) noexcept override;
+  void onError(std::exception_ptr) noexcept override;
 
   // implementation from ConsumerBase::SubscriptionBase
   void request(int64_t n) noexcept override;
@@ -37,6 +36,7 @@ class ChannelResponder : public ConsumerBase,
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
   void handleRequestN(uint32_t n) override;
   void handleCancel() override;
+  void handleError(folly::exception_wrapper ex) override;
 
   void onNextPayloadFrame(
       uint32_t requestN,
@@ -46,10 +46,6 @@ class ChannelResponder : public ConsumerBase,
 
   void endStream(StreamCompletionSignal) override;
 
-  /// State of the Channel responder.
-  enum class State : uint8_t {
-    RESPONDING,
-    CLOSED,
-  } state_{State::RESPONDING};
+  void tryCompleteChannel();
 };
 } // reactivesocket

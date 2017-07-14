@@ -1,5 +1,8 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -7,65 +10,57 @@
 #include <type_traits>
 #include <utility>
 
+#include "yarpl/Refcounted.h"
 #include "yarpl/Scheduler.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/flowable/Subscribers.h"
+#include "yarpl/utils/credits.h"
 #include "yarpl/utils/type_traits.h"
-
-#include "../Refcounted.h"
-#include "Subscriber.h"
-#include "Subscribers.h"
 
 namespace yarpl {
 namespace flowable {
 
 template <typename T>
 class Flowable : public virtual Refcounted {
- public:
-  static const auto CANCELED = std::numeric_limits<int64_t>::min();
-  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
+  constexpr static auto kCanceled = credits::kCanceled;
+  constexpr static auto kNoFlowControl = credits::kNoFlowControl;
 
+ public:
   virtual void subscribe(Reference<Subscriber<T>>) = 0;
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
-   * @param batch Optional batch size for request_n. Default: no flow control.
    */
   template <
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  void subscribe(Next&& next, int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+  void subscribe(Next&& next, int64_t batch = kNoFlowControl) {
     subscribe(Subscribers::create<T>(next, batch));
   }
 
   /**
    * Subscribe overload that accepts lambdas.
    *
-   * @param next
-   * @param error
-   * @param batch Optional batch size for request_n. Default: no flow control.
+   * Takes an optional batch size for request_n. Default is no flow control.
    */
   template <
       typename Next,
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(std::exception_ptr), void>::value>::type>
   void subscribe(
       Next&& next,
       Error&& error,
-      int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+      int64_t batch = kNoFlowControl) {
     subscribe(Subscribers::create<T>(next, error, batch));
   }
 
   /**
    * Subscribe overload that accepts lambdas.
    *
-   * @param next
-   * @param error
-   * @param complete
-   * @param batch Optional batch size for request_n. Default: no flow control.
+   * Takes an optional batch size for request_n. Default is no flow control.
    */
   template <
       typename Next,
@@ -73,13 +68,13 @@ class Flowable : public virtual Refcounted {
       typename Complete,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value &&
+          std::is_callable<Error(std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   void subscribe(
       Next&& next,
       Error&& error,
       Complete&& complete,
-      int64_t batch = Flowable<T>::NO_FLOW_CONTROL) {
+      int64_t batch = kNoFlowControl) {
     subscribe(Subscribers::create<T>(next, error, complete, batch));
   }
 
@@ -89,7 +84,14 @@ class Flowable : public virtual Refcounted {
   template <typename Function>
   auto filter(Function&& function);
 
+  template <typename Function>
+  auto reduce(Function&& function);
+
   auto take(int64_t);
+
+  auto skip(int64_t);
+
+  auto ignoreElements();
 
   auto subscribeOn(Scheduler&);
 
@@ -130,7 +132,7 @@ class Flowable : public virtual Refcounted {
    * This is synchronous: the emit calls are triggered within the context
    * of a request(n) call.
    */
-  class SynchronousSubscription : public Subscription, public Subscriber<T> {
+  class SynchronousSubscription : private Subscription, private Subscriber<T> {
    public:
     SynchronousSubscription(
         Reference<Flowable> flowable,
@@ -156,14 +158,18 @@ class Flowable : public virtual Refcounted {
       while (true) {
         auto current = requested_.load(std::memory_order_relaxed);
 
-        // Turn flow control off for overflow.
-        auto const total =
-            (current > std::numeric_limits<int64_t>::max() - delta)
-            ? NO_FLOW_CONTROL
-            : current + delta;
+        if (current == kCanceled) {
+          // this can happen because there could be an async barrier between
+          // the subscriber and the subscription
+          // for instance while onComplete is being delivered
+          // (on effectively cancelled subscription) the subscriber can call call request(n)
+          return;
+        }
 
-        if (requested_.compare_exchange_strong(current, total))
+        auto const total = credits::add(current, delta);
+        if (requested_.compare_exchange_strong(current, total)) {
           break;
+        }
       }
 
       process();
@@ -174,13 +180,20 @@ class Flowable : public virtual Refcounted {
       // make sure we break the reference cycle between subscription and
       // subscriber
       //
-      requested_.exchange(CANCELED, std::memory_order_relaxed);
-      process();
+      auto previous = requested_.exchange(kCanceled, std::memory_order_relaxed);
+      if(previous != kCanceled) {
+        // this can happen because there could be an async barrier between
+        // the subscriber and the subscription
+        // for instance while onComplete is being delivered
+        // (on effectively cancelled subscription) the subscriber can call call request(n)
+        process();
+      }
     }
 
     // Subscriber methods.
     void onSubscribe(Reference<Subscription>) override {
       // Not actually expected to be called.
+      assert(false && "do not call this method!");
     }
 
     void onNext(T value) override {
@@ -188,17 +201,27 @@ class Flowable : public virtual Refcounted {
     }
 
     void onComplete() override {
+      // we will set the flag first to save a potential call to lock.try_lock()
+      // in the process method via cancel or request methods
+      auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);
+      assert(old != kCanceled && "calling onComplete or onError twice or on "
+          "canceled subscription");
+
       subscriber_->onComplete();
-      requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
       //
       // Note: we're not invoking the Subscriber superclass' method:
       // we're following the Subscription's protocol instead.
     }
 
-    void onError(const std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
+      // we will set the flag first to save a potential call to lock.try_lock()
+      // in the process method via cancel or request methods
+      auto old = requested_.exchange(kCanceled, std::memory_order_relaxed);
+      assert(old != kCanceled && "calling onComplete or onError twice or on "
+          "canceled subscription");
+
       subscriber_->onError(error);
-      requested_.store(CANCELED, std::memory_order_relaxed);
       // We should already be in process(); nothing more to do.
       //
       // Note: we're not invoking the Subscriber superclass' method:
@@ -227,7 +250,7 @@ class Flowable : public virtual Refcounted {
         auto current = requested_.load(std::memory_order_relaxed);
 
         // Subscription was canceled, completed, or had an error.
-        if (current == CANCELED) {
+        if (current == kCanceled) {
           // Don't destroy a locked mutex.
           lock.unlock();
 
@@ -249,12 +272,14 @@ class Flowable : public virtual Refcounted {
 
         while (true) {
           current = requested_.load(std::memory_order_relaxed);
-          if (current == CANCELED || (current == NO_FLOW_CONTROL && !done))
+          if (current == kCanceled || (current == kNoFlowControl && !done)) {
             break;
+          }
 
-          auto updated = done ? CANCELED : current - emitted;
-          if (requested_.compare_exchange_strong(current, updated))
+          auto updated = done ? kCanceled : current - emitted;
+          if (requested_.compare_exchange_strong(current, updated)) {
             break;
+          }
         }
       }
     }
@@ -282,7 +307,7 @@ class Flowable : public virtual Refcounted {
 } // flowable
 } // yarpl
 
-#include "FlowableOperator.h"
+#include "yarpl/flowable/FlowableOperator.h"
 
 namespace yarpl {
 namespace flowable {
@@ -331,9 +356,29 @@ auto Flowable<T>::filter(Function&& function) {
 }
 
 template <typename T>
+template <typename Function>
+auto Flowable<T>::reduce(Function&& function) {
+  using D = typename std::result_of<Function(T, T)>::type;
+  return Reference<Flowable<D>>(new ReduceOperator<T, D, Function>(
+      Reference<Flowable<T>>(this), std::forward<Function>(function)));
+}
+
+template <typename T>
 auto Flowable<T>::take(int64_t limit) {
   return Reference<Flowable<T>>(
       new TakeOperator<T>(Reference<Flowable<T>>(this), limit));
+}
+
+template <typename T>
+auto Flowable<T>::skip(int64_t offset) {
+  return Reference<Flowable<T>>(
+    new SkipOperator<T>(Reference<Flowable<T>>(this), offset));
+}
+
+template <typename T>
+auto Flowable<T>::ignoreElements() {
+  return Reference<Flowable<T>>(
+      new IgnoreElementsOperator<T>(Reference<Flowable<T>>(this)));
 }
 
 template <typename T>

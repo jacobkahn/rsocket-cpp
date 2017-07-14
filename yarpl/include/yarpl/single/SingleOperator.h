@@ -1,10 +1,12 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <utility>
 
-#include "Single.h"
-#include "SingleObserver.h"
-#include "SingleSubscription.h"
+#include "yarpl/single/Single.h"
+#include "yarpl/single/SingleObserver.h"
+#include "yarpl/single/SingleSubscription.h"
 
 namespace yarpl {
 namespace single {
@@ -60,7 +62,7 @@ class SingleOperator : public Single<D> {
           Reference<::yarpl::single::SingleSubscription>(this));
     }
 
-    void onError(const std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
       observer_->onError(error);
       upstreamSubscription_.reset(); // should break the cycle to this
     }

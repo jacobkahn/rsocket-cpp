@@ -2,15 +2,19 @@
 
 #pragma once
 
-#include <folly/futures/Future.h>
-#include <folly/io/async/EventBase.h>
+#include <folly/Optional.h>
 
 #include "src/DuplexConnection.h"
 
+namespace folly {
+class EventBase;
+}
+
 namespace rsocket {
 
-using OnDuplexConnectionAccept = std::function<
-    void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>;
+using OnDuplexConnectionAccept = std::function<void(
+    std::unique_ptr<rsocket::DuplexConnection>,
+    folly::EventBase&)>;
 
 /**
  * Common interface for a server that accepts connections and turns them into
@@ -36,15 +40,11 @@ class ConnectionAcceptor {
 
   /**
    * Allocate/start required resources (threads, sockets, etc) and begin
-   * listening for new connections.
-   *
-   * Will return an empty future on success, otherwise the future will contain
-   * the error.
+   * listening for new connections.  Must be synchronous.
    *
    * This can only be called once.
    */
-  virtual folly::Future<folly::Unit> start(
-      OnDuplexConnectionAccept onAccept) = 0;
+  virtual void start(OnDuplexConnectionAccept) = 0;
 
   /**
    * Stop listening for new connections.
@@ -53,5 +53,11 @@ class ConnectionAcceptor {
    * the implementation's destructor.  Must be synchronous.
    */
   virtual void stop() = 0;
+
+  /**
+   * Get the port the acceptor is listening on.  Returns folly::none when the
+   * acceptor is not listening.
+   */
+  virtual folly::Optional<uint16_t> listeningPort() const = 0;
 };
-}
+} // namespace rsocket

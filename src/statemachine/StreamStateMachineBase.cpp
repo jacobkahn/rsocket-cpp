@@ -1,26 +1,24 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "src/statemachine/StreamStateMachineBase.h"
+
 #include <folly/io/IOBuf.h>
-#include "RSocketStateMachine.h"
-#include "StreamsHandler.h"
+
+#include "src/statemachine/RSocketStateMachine.h"
+#include "src/statemachine/StreamsWriter.h"
 
 namespace rsocket {
 
-void StreamStateMachineBase::handlePayload(
-    Payload&& payload,
-    bool complete,
-    bool flagsNext) {
+void StreamStateMachineBase::handlePayload(Payload&&, bool, bool) {
   VLOG(4) << "Unexpected handlePayload";
 }
 
-void StreamStateMachineBase::handleRequestN(uint32_t n) {
+void StreamStateMachineBase::handleRequestN(uint32_t) {
   VLOG(4) << "Unexpected handleRequestN";
 }
 
-void StreamStateMachineBase::handleError(
-    folly::exception_wrapper errorPayload) {
-  VLOG(4) << "Unexpected handleError";
+void StreamStateMachineBase::handleError(folly::exception_wrapper) {
+  closeStream(StreamCompletionSignal::ERROR);
 }
 
 void StreamStateMachineBase::handleCancel() {
@@ -55,7 +53,6 @@ void StreamStateMachineBase::applicationError(std::string errorPayload) {
       streamId_,
       StreamCompletionSignal::APPLICATION_ERROR,
       Payload(std::move(errorPayload)));
-  closeStream(StreamCompletionSignal::APPLICATION_ERROR);
 }
 
 void StreamStateMachineBase::errorStream(std::string errorPayload) {
@@ -69,13 +66,11 @@ void StreamStateMachineBase::errorStream(std::string errorPayload) {
 void StreamStateMachineBase::cancelStream() {
   writer_->writeCloseStream(
       streamId_, StreamCompletionSignal::CANCEL, Payload());
-  closeStream(StreamCompletionSignal::CANCEL);
 }
 
 void StreamStateMachineBase::completeStream() {
   writer_->writeCloseStream(
       streamId_, StreamCompletionSignal::COMPLETE, Payload());
-  closeStream(StreamCompletionSignal::COMPLETE);
 }
 
 void StreamStateMachineBase::closeStream(StreamCompletionSignal signal) {

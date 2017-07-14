@@ -18,10 +18,7 @@ DEFINE_int32(port, 9898, "port to connect to");
 int main(int argc, char* argv[]) {
   FLAGS_logtostderr = true;
   FLAGS_minloglevel = 0;
-
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
+  folly::init(&argc, &argv);
 
   TcpConnectionAcceptor::Options opts;
   opts.port = FLAGS_port;
@@ -29,23 +26,22 @@ int main(int argc, char* argv[]) {
   // RSocket server accepting on TCP
   auto rs = RSocket::createServer(
       std::make_unique<TcpConnectionAcceptor>(std::move(opts)));
-  // global request handlers
-  auto textHandler = std::make_shared<TextRequestHandler>();
-  auto jsonHandler = std::make_shared<JsonRequestHandler>();
+  // global request responders
+  auto textResponder = std::make_shared<TextRequestResponder>();
+  auto jsonResponder = std::make_shared<JsonRequestResponder>();
   // start accepting connections
   rs->startAndPark(
-      [textHandler, jsonHandler](std::shared_ptr<ConnectionSetupRequest> r)
-          -> std::shared_ptr<RSocketResponder> {
-            if (r->getDataMimeType() == "text/plain") {
+      [textResponder, jsonResponder](auto& setup) {
+            if (setup.params().dataMimeType == "text/plain") {
               LOG(INFO) << "Connection Request => text/plain MimeType";
-              return textHandler;
-            } else if (r->getDataMimeType() == "application/json") {
+              setup.createRSocket(textResponder);
+            } else if (setup.params().dataMimeType == "application/json") {
               LOG(INFO) << "Connection Request => application/json MimeType";
-              return jsonHandler;
+              setup.createRSocket(jsonResponder);
             } else {
               LOG(INFO) << "Connection Request => Unsupported MimeType"
-                        << r->getDataMimeType();
-              throw UnsupportedSetupError("Unknown MimeType");
+                        << setup.params().dataMimeType;
+              setup.error(UnsupportedSetupError("Unknown MimeType"));
             }
           });
 }

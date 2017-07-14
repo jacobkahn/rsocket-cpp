@@ -1,10 +1,13 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <folly/Baton.h>
-#include "../Refcounted.h"
-#include "SingleObserver.h"
-#include "SingleObservers.h"
-#include "SingleSubscription.h"
+
+#include "yarpl/Refcounted.h"
+#include "yarpl/single/SingleObserver.h"
+#include "yarpl/single/SingleObservers.h"
+#include "yarpl/single/SingleSubscription.h"
 #include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
@@ -27,8 +30,6 @@ class Single : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param success
    */
   template <
       typename Success,
@@ -40,16 +41,13 @@ class Single : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param success
-   * @param error
    */
   template <
       typename Success,
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Success(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(std::exception_ptr), void>::value>::type>
   void subscribe(Success&& next, Error&& error) {
     subscribe(SingleObservers::create<T>(next, error));
   }
@@ -58,8 +56,6 @@ class Single : public virtual Refcounted {
    * Blocking subscribe that accepts lambdas.
    *
    * This blocks the current thread waiting on the response.
-   *
-   * @param success
    */
   template <
       typename Success,
@@ -72,7 +68,7 @@ class Single : public virtual Refcounted {
           next(std::move(t));
           waiting_->post();
         }));
-      // TODO get errors and throw if one is received
+    // TODO get errors and throw if one is received
     waiting_->wait();
   }
 
@@ -97,10 +93,8 @@ class Single<void> : public virtual Refcounted {
   virtual void subscribe(Reference<SingleObserver<void>>) = 0;
 
   /**
-   * subscribe overload taking lambda for onSuccess that is called upon writing
-   * to the network
-   * @tparam Success
-   * @param s
+   * Subscribe overload taking lambda for onSuccess that is called upon writing
+   * to the network.
    */
   template <
       typename Success,
@@ -121,7 +115,7 @@ class Single<void> : public virtual Refcounted {
       }
 
       // No further calls to the subscription after this method is invoked.
-      virtual void onError(const std::exception_ptr eptr) override {
+      virtual void onError(std::exception_ptr eptr) override {
         SingleObserver<void>::onError(eptr);
       }
 
@@ -178,7 +172,7 @@ class SingleVoidFromPublisherOperator : public Single<void> {
 } // observable
 } // yarpl
 
-#include "SingleOperator.h"
+#include "yarpl/single/SingleOperator.h"
 
 namespace yarpl {
 namespace single {

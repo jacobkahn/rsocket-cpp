@@ -59,6 +59,9 @@ enum class ErrorCode : uint32_t {
   // The server rejected the setup, it can specify the reason in the payload.
   // Stream ID MUST be 0.
   REJECTED_SETUP = 0x00000003,
+  // The server rejected the resume, it can specify the reason in the payload.
+  // Stream ID MUST be 0.
+  REJECTED_RESUME = 0x00000004,
   // The connection is being terminated. Stream ID MUST be 0.
   CONNECTION_ERROR = 0x00000101,
   // Application layer logic generating a Reactive Streams onError event.
@@ -254,6 +257,7 @@ class Frame_REQUEST_STREAM : public Frame_REQUEST_Base {
             0,
             std::move(payload)) {}
 };
+std::ostream& operator<<(std::ostream& os, const Frame_REQUEST_STREAM& frame);
 
 class Frame_REQUEST_CHANNEL : public Frame_REQUEST_Base {
  public:
@@ -281,6 +285,7 @@ class Frame_REQUEST_CHANNEL : public Frame_REQUEST_Base {
             0,
             std::move(payload)) {}
 };
+std::ostream& operator<<(std::ostream&, const Frame_REQUEST_CHANNEL&);
 
 class Frame_REQUEST_RESPONSE {
  public:
@@ -385,6 +390,7 @@ class Frame_ERROR {
   static Frame_ERROR invalidFrame();
   static Frame_ERROR badSetupFrame(const std::string& message);
   static Frame_ERROR connectionError(const std::string& message);
+  static Frame_ERROR rejectedResume(const std::string& message);
   static Frame_ERROR error(StreamId streamId, Payload&& payload);
   static Frame_ERROR applicationError(StreamId streamId, Payload&& payload);
 

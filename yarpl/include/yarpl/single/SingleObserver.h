@@ -1,12 +1,15 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <stdexcept>
 
-#include "../Refcounted.h"
-#include "SingleSubscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/single/SingleSubscription.h"
 
 namespace yarpl {
 namespace single {
+
 template <typename T>
 class SingleObserver : public virtual Refcounted {
  public:
@@ -22,7 +25,7 @@ class SingleObserver : public virtual Refcounted {
   }
 
   // No further calls to the subscription after this method is invoked.
-  virtual void onError(const std::exception_ptr) {
+  virtual void onError(std::exception_ptr) {
     subscription_.reset();
   }
 
@@ -53,7 +56,7 @@ class SingleObserver<void> : public virtual Refcounted {
   }
 
   // No further calls to the subscription after this method is invoked.
-  virtual void onError(const std::exception_ptr) {
+  virtual void onError(std::exception_ptr) {
     subscription_.reset();
   }
 

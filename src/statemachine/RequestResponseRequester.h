@@ -5,15 +5,15 @@
 #include <iosfwd>
 #include "src/Payload.h"
 #include "src/statemachine/StreamStateMachineBase.h"
-#include "yarpl/flowable/Subscriber.h"
-#include "yarpl/flowable/Subscription.h"
+#include "yarpl/single/SingleObserver.h"
+#include "yarpl/single/SingleSubscription.h"
 
 namespace rsocket {
 
 /// Implementation of stream stateMachine that represents a RequestResponse
 /// requester
 class RequestResponseRequester : public StreamStateMachineBase,
-                                 public yarpl::flowable::Subscription {
+                                 public yarpl::single::SingleSubscription {
   using Base = StreamStateMachineBase;
 
  public:
@@ -21,10 +21,9 @@ class RequestResponseRequester : public StreamStateMachineBase,
       : Base(params), initialPayload_(std::move(payload)) {}
 
   void subscribe(
-      yarpl::Reference<yarpl::flowable::Subscriber<Payload>> subscriber);
+      yarpl::Reference<yarpl::single::SingleObserver<Payload>> subscriber);
 
  private:
-  void request(int64_t) noexcept override;
   void cancel() noexcept override;
 
   void handlePayload(Payload&& payload, bool complete, bool flagsNext) override;
@@ -32,8 +31,8 @@ class RequestResponseRequester : public StreamStateMachineBase,
 
   void endStream(StreamCompletionSignal signal) override;
 
-  void pauseStream(RequestHandler& requestHandler) override;
-  void resumeStream(RequestHandler& requestHandler) override;
+//  void pauseStream(RequestHandler& requestHandler) override;
+//  void resumeStream(RequestHandler& requestHandler) override;
 
   /// State of the Subscription requester.
   enum class State : uint8_t {
@@ -42,10 +41,8 @@ class RequestResponseRequester : public StreamStateMachineBase,
     CLOSED,
   } state_{State::NEW};
 
-  /// A Subscriber that will consume payloads.
-  /// This is responsible for delivering a terminal signal to the
-  /// Subscriber once the stream ends.
-  yarpl::Reference<yarpl::flowable::Subscriber<Payload>> consumingSubscriber_;
+  /// The observer that will consume payloads.
+  yarpl::Reference<yarpl::single::SingleObserver<Payload>> consumingSubscriber_;
 
   /// Initial payload which has to be sent with 1st request.
   Payload initialPayload_;

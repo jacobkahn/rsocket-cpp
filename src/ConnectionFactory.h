@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <folly/Function.h>
 #include "src/DuplexConnection.h"
 
 namespace folly {
@@ -10,8 +11,9 @@ class EventBase;
 
 namespace rsocket {
 
-using OnConnect = std::function<
-    void(std::unique_ptr<rsocket::DuplexConnection>, folly::EventBase&)>;
+using OnDuplexConnectionConnect = folly::Function<void(
+    std::unique_ptr<rsocket::DuplexConnection>,
+    folly::EventBase&)>;
 
 /**
  * Common interface for a client to create connections and turn them into
@@ -39,9 +41,7 @@ class ConnectionFactory {
    * multiplex many RSocket connections on a single transport.
    *
    * Resource creation depends on the particular implementation.
-   *
-   * @param onConnect
    */
-  virtual void connect(OnConnect onConnect) = 0;
+  virtual void connect(OnDuplexConnectionConnect onConnect) = 0;
 };
-}
+} // namespace rsocket

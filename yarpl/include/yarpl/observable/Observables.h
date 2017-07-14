@@ -1,8 +1,10 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <limits>
 
-#include "Observable.h"
+#include "yarpl/observable/Observable.h"
 
 namespace yarpl {
 namespace observable {
@@ -39,6 +41,25 @@ class Observables {
       for (auto const& elem : v) {
         observer->onNext(elem);
       }
+      observer->onComplete();
+    };
+
+    return Observable<T>::create(std::move(lambda));
+  }
+
+  // this will generate an observable which can be subscribed to only once
+  template <typename T>
+  static Reference<Observable<T>> justOnce(T value) {
+    auto lambda = [value = std::move(value), used = false](Reference<Observer<T>> observer) mutable {
+      if (used) {
+        observer->onError(
+            std::make_exception_ptr(std::runtime_error("justOnce value was already used")));
+        return;
+      }
+
+      used = true;
+      // # requested should be > 0.  Ignoring the actual parameter.
+      observer->onNext(std::move(value));
       observer->onComplete();
     };
 

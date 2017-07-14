@@ -1,8 +1,10 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include "yarpl/utils/type_traits.h"
 
-#include "SingleObserver.h"
+#include "yarpl/single/SingleObserver.h"
 
 namespace yarpl {
 namespace single {

@@ -5,12 +5,12 @@
 #include <folly/ExceptionWrapper.h>
 #include <cstddef>
 #include <iostream>
-#include "RSocketStateMachine.h"
+
 #include "src/Payload.h"
 #include "src/internal/AllowanceSemaphore.h"
 #include "src/internal/Common.h"
+#include "src/statemachine/RSocketStateMachine.h"
 #include "src/statemachine/StreamStateMachineBase.h"
-#include "src/temporary_home/NullRequestHandler.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {
@@ -41,26 +41,24 @@ class ConsumerBase : public StreamStateMachineBase,
   /// @}
 
  protected:
-  /// @{
+  void checkConsumerRequest();
+  void cancelConsumer();
+
+  bool consumerClosed() const {
+    return state_ == State::CLOSED;
+  }
+
   void endStream(StreamCompletionSignal signal) override;
 
-  void pauseStream(RequestHandler& requestHandler) override;
-
-  void resumeStream(RequestHandler& requestHandler) override;
+//  void pauseStream(RequestHandler& requestHandler) override;
+//  void resumeStream(RequestHandler& requestHandler) override;
 
   void processPayload(Payload&&, bool onNext);
 
-  void onError(folly::exception_wrapper ex);
-  /// @}
+  void completeConsumer();
+  void errorConsumer(folly::exception_wrapper ex);
 
  private:
-  // we don't want derived classes to call these methods.
-  // derived classes should be calling implementation methods, not the top level
-  // methods which are for the application code.
-  // avoiding potential bugs..
-  using Subscription::request;
-  using Subscription::cancel;
-
   void sendRequests();
 
   void handleFlowControlError();
@@ -75,5 +73,10 @@ class ConsumerBase : public StreamStateMachineBase,
   /// An allowance that have yet to be synced to the other end by sending
   /// REQUEST_N frames.
   AllowanceSemaphore pendingAllowance_;
+
+  enum class State : uint8_t {
+    RESPONDING,
+    CLOSED,
+  } state_{State::RESPONDING};
 };
 }

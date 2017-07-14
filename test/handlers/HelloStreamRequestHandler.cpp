@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 #include "HelloStreamRequestHandler.h"
-#include <string>
+#include <sstream>
 #include "yarpl/Flowable.h"
 
 using namespace ::rsocket;
@@ -14,7 +14,7 @@ namespace tests {
 Reference<Flowable<rsocket::Payload>>
 HelloStreamRequestHandler::handleRequestStream(
     rsocket::Payload request,
-    rsocket::StreamId streamId) {
+    rsocket::StreamId) {
   LOG(INFO) << "HelloStreamRequestHandler.handleRequestStream " << request;
 
   // string from payload data

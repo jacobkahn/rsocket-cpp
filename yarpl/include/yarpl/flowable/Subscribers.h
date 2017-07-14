@@ -1,9 +1,12 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <exception>
 #include <limits>
 
-#include "Subscriber.h"
+#include "yarpl/flowable/Subscriber.h"
+#include "yarpl/utils/credits.h"
 #include "yarpl/utils/type_traits.h"
 
 namespace yarpl {
@@ -14,17 +17,15 @@ namespace flowable {
 /// may be specified, corresponding to onNext, onError and onSubscribe
 /// method bodies in the subscriber.
 class Subscribers {
- public:
-  // defining here instead of using Flowable<T>::NO_FLOW_CONTROL so
-  // this file doesn't need to include Flowable.h
-  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
+  constexpr static auto kNoFlowControl = credits::kNoFlowControl;
 
+ public:
   template <
       typename T,
       typename Next,
       typename =
           typename std::enable_if<std::is_callable<Next(T), void>::value>::type>
-  static auto create(Next&& next, int64_t batch = NO_FLOW_CONTROL) {
+  static auto create(Next&& next, int64_t batch = kNoFlowControl) {
     return Reference<Subscriber<T>>(
         new Base<T, Next>(std::forward<Next>(next), batch));
   }
@@ -35,9 +36,9 @@ class Subscribers {
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(std::exception_ptr), void>::value>::type>
   static auto
-  create(Next&& next, Error&& error, int64_t batch = NO_FLOW_CONTROL) {
+  create(Next&& next, Error&& error, int64_t batch = kNoFlowControl) {
     return Reference<Subscriber<T>>(new WithError<T, Next, Error>(
         std::forward<Next>(next), std::forward<Error>(error), batch));
   }
@@ -49,13 +50,13 @@ class Subscribers {
       typename Complete,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value &&
+          std::is_callable<Error(std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   static auto create(
       Next&& next,
       Error&& error,
       Complete&& complete,
-      int64_t batch = NO_FLOW_CONTROL) {
+      int64_t batch = kNoFlowControl) {
     return Reference<Subscriber<T>>(
         new WithErrorAndComplete<T, Next, Error, Complete>(
             std::forward<Next>(next),

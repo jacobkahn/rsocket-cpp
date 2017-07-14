@@ -1,10 +1,12 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <utility>
 
-#include "../Observable.h"
-#include "Observer.h"
-#include "Subscription.h"
+#include "yarpl/Observable.h"
+#include "yarpl/observable/Observer.h"
+#include "yarpl/observable/Subscription.h"
 
 namespace yarpl {
 namespace observable {
@@ -60,7 +62,13 @@ class ObservableOperator : public Observable<D> {
       observer_->onNext(std::move(value));
     }
 
-   private:
+   protected:
+    void onComplete() override {
+      observer_->onComplete();
+      upstream_.reset(); // breaking the cycle
+    }
+
+  private:
     void onSubscribe(
         Reference<::yarpl::observable::Subscription> subscription) override {
       upstream_ = std::move(subscription);
@@ -68,12 +76,7 @@ class ObservableOperator : public Observable<D> {
           Reference<::yarpl::observable::Subscription>(this));
     }
 
-    void onComplete() override {
-      observer_->onComplete();
-      upstream_.reset(); // breaking the cycle
-    }
-
-    void onError(const std::exception_ptr error) override {
+    void onError(std::exception_ptr error) override {
       observer_->onError(error);
       upstream_.reset(); // breaking the cycle
     }
@@ -127,7 +130,7 @@ class MapOperator : public ObservableOperator<U, D> {
     Subscription(
         Reference<Observable<D>> observable,
         Reference<Observer<D>> observer)
-        : ObservableOperator<U, D>::Subscription(
+        : Super(
               std::move(observable),
               std::move(observer)) {}
 
@@ -165,7 +168,7 @@ class FilterOperator : public ObservableOperator<U, U> {
     Subscription(
         Reference<Observable<U>> observable,
         Reference<Observer<U>> observer)
-        : ObservableOperator<U, U>::Subscription(
+        : Super(
               std::move(observable),
               std::move(observer)) {}
 
@@ -175,6 +178,63 @@ class FilterOperator : public ObservableOperator<U, U> {
         Super::observerOnNext(std::move(value));
       }
     }
+  };
+
+  F function_;
+};
+
+template<
+    typename U,
+    typename D,
+    typename F,
+    typename = typename std::enable_if<std::is_assignable<D, U>::value>,
+    typename = typename std::enable_if<std::is_callable<F(D, U), D>::value>::type>
+class ReduceOperator : public ObservableOperator<U, D> {
+public:
+  ReduceOperator(Reference<Observable<U>> upstream, F &&function)
+      : ObservableOperator<U, D>(std::move(upstream)),
+        function_(std::forward<F>(function)) {}
+
+  void subscribe(Reference<Observer<D>> subscriber) override {
+    ObservableOperator<U, D>::upstream_->subscribe(
+        // Note: implicit cast to a reference to a subscriber.
+        Reference<Subscription>(new Subscription(
+            Reference<Observable<D>>(this), std::move(subscriber))));
+  }
+
+private:
+  class Subscription : public ObservableOperator<U, D>::Subscription {
+    using Super = typename ObservableOperator<U, D>::Subscription;
+
+  public:
+    Subscription(
+        Reference <Observable<D>> flowable,
+        Reference <Observer<D>> subscriber)
+        : Super(
+        std::move(flowable),
+        std::move(subscriber)),
+          accInitialized_(false) {}
+
+    void onNext(U value) override {
+      auto* reduce = Super::template getObservableAs<ReduceOperator>();
+      if (accInitialized_) {
+        acc_ = reduce->function_(std::move(acc_), std::move(value));
+      } else {
+        acc_ = std::move(value);
+        accInitialized_ = true;
+      }
+    }
+
+    void onComplete() override {
+      if (accInitialized_) {
+        Super::observerOnNext(std::move(acc_));
+      }
+      Super::onComplete();
+    }
+
+  private:
+    bool accInitialized_;
+    D acc_;
   };
 
   F function_;
@@ -200,7 +260,7 @@ class TakeOperator : public ObservableOperator<T, T> {
         Reference<Observable<T>> observable,
         int64_t limit,
         Reference<Observer<T>> observer)
-        : ObservableOperator<T, T>::Subscription(
+        : Super(
               std::move(observable),
               std::move(observer)),
           limit_(limit) {}
@@ -223,6 +283,72 @@ class TakeOperator : public ObservableOperator<T, T> {
   };
 
   const int64_t limit_;
+};
+
+template <typename T>
+class SkipOperator : public ObservableOperator<T, T> {
+ public:
+  SkipOperator(Reference<Observable<T>> upstream, int64_t offset)
+      : ObservableOperator<T, T>(std::move(upstream)), offset_(offset) {}
+
+  void subscribe(Reference<Observer<T>> observer) override {
+    ObservableOperator<T, T>::upstream_->subscribe(
+      make_ref<Subscription>(
+          Reference<Observable<T>>(this), offset_, std::move(observer)));
+  }
+
+ private:
+  class Subscription : public ObservableOperator<T, T>::Subscription {
+    using Super = typename ObservableOperator<T,T>::Subscription;
+   public:
+    Subscription(
+       Reference<Observable<T>> observable,
+       int64_t offset,
+       Reference<Observer<T>> observer)
+       : Super(std::move(observable), std::move(observer)),
+       offset_(offset) {}
+
+    void onNext(T value) override {
+      if (offset_ <= 0) {
+        Super::observerOnNext(
+            std::move(value));
+      } else {
+        --offset_;
+      }
+    }
+
+   private:
+    int64_t offset_;
+  };
+
+  const int64_t offset_;
+};
+
+template <typename T>
+class IgnoreElementsOperator : public ObservableOperator<T, T> {
+ public:
+  explicit IgnoreElementsOperator(Reference<Observable<T>> upstream)
+      : ObservableOperator<T, T>(std::move(upstream)) {}
+
+  void subscribe(Reference<Observer<T>> observer) override {
+    ObservableOperator<T, T>::upstream_->subscribe(
+        Reference<Subscription>(new Subscription(
+            Reference<Observable<T>>(this), std::move(observer))));
+  }
+
+ private:
+  class Subscription : public ObservableOperator<T, T>::Subscription {
+    using Super = typename ObservableOperator<T,T>::Subscription;
+   public:
+    Subscription(
+        Reference<Observable<T>> observable,
+        Reference<Observer<T>> observer)
+        : ObservableOperator<T, T>::Subscription(
+              std::move(observable),
+              std::move(observer)) {}
+
+    void onNext(T) override {}
+  };
 };
 
 template <typename T>

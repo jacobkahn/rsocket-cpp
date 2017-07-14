@@ -22,7 +22,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
 # The yarpl-tests binary constantly fails with an ASAN error in gtest internal
 # code on macOS.
 if(APPLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize=address,undefined")
+  message("== macOS detected, disabling ASAN for yarpl")
+  add_compile_options("-fno-sanitize=address,undefined")
 endif()
 
 # Configuration for Debug build mode.
@@ -31,6 +32,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 
+# Find glog and gflags libraries specifically
+find_path(GLOG_INCLUDE_DIR glog/logging.h)
+
+find_library(GLOG_LIBRARY glog)
+
+message("glog include_dir <${GLOG_INCLUDE_DIR}> lib <${GLOG_LIBRARY}>")
+
+include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR})
 
 
@@ -44,11 +53,14 @@ add_library(
         # Flowable public API
         include/yarpl/Flowable.h
         include/yarpl/flowable/Flowable.h
-        include/yarpl/flowable/Flowables.h
         include/yarpl/flowable/FlowableOperator.h
+        include/yarpl/flowable/Flowable_FromObservable.h
+        include/yarpl/flowable/Flowables.h
         include/yarpl/flowable/Subscriber.h
         include/yarpl/flowable/Subscribers.h
         include/yarpl/flowable/Subscription.h
+        include/yarpl/flowable/TestSubscriber.h
+        src/yarpl/flowable/sources/Subscription.cpp
         # Observable public API
         include/yarpl/Observable.h
         include/yarpl/observable/Observable.h
@@ -70,18 +82,14 @@ add_library(
         include/yarpl/single/SingleSubscription.h
         include/yarpl/single/SingleSubscriptions.h
         include/yarpl/single/SingleTestObserver.h
-        src/yarpl/single/SingleSubscriptions.cpp
-        # Flowable private
-        src/yarpl/Refcounted.cpp
-        src/yarpl/flowable/sources/Flowable_FromObservable.h
         # utils
         include/yarpl/utils/type_traits.h
-        src/yarpl/flowable/utils/SubscriptionHelper.h
-        src/yarpl/flowable/utils/SubscriptionHelper.cpp
+        include/yarpl/utils/credits.h
+        src/yarpl/utils/credits.cpp
+        include/yarpl/utils/ExceptionString.h
         # Scheduler
         include/yarpl/schedulers/ThreadScheduler.h
-        src/yarpl/schedulers/ThreadScheduler.cpp
-        include/yarpl/flowable/TestSubscriber.h)
+        src/yarpl/schedulers/ThreadScheduler.cpp)
 
 target_include_directories(
         yarpl
@@ -89,11 +97,7 @@ target_include_directories(
         PUBLIC "${PROJECT_SOURCE_DIR}/src" # allow include paths such as "yarpl/flowable/FlowableRange.h"
         )
 
-target_link_libraries(
-        yarpl
-        ${CMAKE_THREAD_LIBS_INIT}
-)
-
+target_link_libraries(yarpl folly)
 
 # Executable for Experimenting
 add_executable(
@@ -128,18 +132,16 @@ add_executable(
         test/RefcountedTest.cpp
         test/ReferenceTest.cpp
         test/Scheduler_test.cpp
-        test/SubscriptionHelper_test.cpp
         test/Tuple.cpp
         test/Tuple.h
+        test/credits-test.cpp
 )
 
 target_link_libraries(
         yarpl-tests
         yarpl
-        ${FOLLY_LIBRARIES} # inherited from rsocket-cpp CMake
         ${GMOCK_LIBS} # inherited from rsocket-cpp CMake
-        ${CMAKE_THREAD_LIBS_INIT}
-)
+        ${GLOG_LIBRARY})
 
 target_include_directories(
         yarpl-tests
@@ -148,21 +150,4 @@ target_include_directories(
 
 add_dependencies(yarpl-tests gmock)
 
-## perf tests
-#add_executable(
-#        yarpl-perf
-#        perf/yarpl-perf.cpp
-#        perf/Observable_perf.cpp
-#        perf/Function_perf.cpp
-#)
-#
-#target_link_libraries(
-#        yarpl-perf
-#        yarpl
-#        benchmark
-#)
-
-#target_include_directories(
-#        yarpl-perf
-#        PUBLIC "${PROJECT_SOURCE_DIR}/include" # allow include paths such as "yarpl/observable.h" can be used
-#)
+add_test(NAME yarpl-tests COMMAND yarpl-tests)

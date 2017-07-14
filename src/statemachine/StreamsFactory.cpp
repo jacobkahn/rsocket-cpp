@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "StreamsFactory.h"
+#include "src/statemachine/StreamsFactory.h"
+
 #include "src/statemachine/ChannelRequester.h"
 #include "src/statemachine/ChannelResponder.h"
 #include "src/statemachine/RSocketStateMachine.h"
@@ -48,7 +49,7 @@ void StreamsFactory::createStreamRequester(
 
 void StreamsFactory::createRequestResponseRequester(
     Payload payload,
-    Reference<yarpl::flowable::Subscriber<Payload>> responseSink) {
+    Reference<yarpl::single::SingleObserver<Payload>> responseSink) {
   RequestResponseRequester::Parameters params(
       connection_.shared_from_this(), getNextStreamId());
   auto stateMachine =
@@ -101,7 +102,7 @@ StreamsFactory::createStreamResponder(
   return stateMachine;
 }
 
-Reference<yarpl::flowable::Subscriber<Payload>>
+Reference<yarpl::single::SingleObserver<Payload>>
 StreamsFactory::createRequestResponseResponder(StreamId streamId) {
   RequestResponseResponder::Parameters params(
       connection_.shared_from_this(), streamId);

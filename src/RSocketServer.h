@@ -6,16 +6,20 @@
 
 #include <folly/Baton.h>
 #include <folly/Synchronized.h>
-
+#include <folly/ThreadLocal.h>
 #include "src/ConnectionAcceptor.h"
-#include "src/ConnectionSetupRequest.h"
+#include "src/RSocketParameters.h"
 #include "src/RSocketResponder.h"
-#include "src/temporary_home/ServerConnectionAcceptor.h"
+#include "src/RSocketSetup.h"
+#include "src/internal/SetupResumeAcceptor.h"
 
 namespace rsocket {
 
-using OnAccept = std::function<std::shared_ptr<RSocketResponder>(
-    std::shared_ptr<ConnectionSetupRequest>)>;
+class RSocketConnectionManager;
+
+using OnRSocketSetup = std::function<void(RSocketSetup&)>;
+using OnRSocketResume = std::function<void(ResumeParameters&)>;
+
 /**
  * API for starting an RSocket server. Returned from RSocket::createServer.
  *
@@ -45,7 +49,7 @@ class RSocketServer {
    *
    * This method assumes it will be called only once.
    */
-  void start(OnAccept);
+  void start(OnRSocketSetup);
 
   /**
    * Start the ConnectionAcceptor and begin handling connections.
@@ -55,7 +59,7 @@ class RSocketServer {
    *
    * This method assumes it will be called only once.
    */
-  void startAndPark(OnAccept);
+  void startAndPark(OnRSocketSetup);
 
   /**
    * Unblock the server if it has called startAndPark().  Can only be called
@@ -72,31 +76,41 @@ class RSocketServer {
   //          std::unique_ptr<ConnectionResumeRequest>)>);
 
   // TODO version supporting RSocketStats and other params
-  // RSocketServer::start(OnAccept onAccept, ServerSetup setupParams)
+  // RSocketServer::start(OnRSocketSetup onRSocketSetup, ServerSetup setupParams)
 
-  friend class RSocketServerConnectionHandler;
+  void acceptConnection(
+      std::unique_ptr<DuplexConnection> connection,
+      folly::EventBase & eventBase,
+      OnRSocketSetup onRSocketSetup);
+
+  void shutdownAndWait();
+
+  /**
+   * Gets the port the ConnectionAcceptor is listening on.  Returns folly::none
+   * if this server is not listening on a port.
+   */
+  folly::Optional<uint16_t> listeningPort() const;
 
  private:
-  void addConnection(
-      std::shared_ptr<rsocket::RSocketStateMachine>,
-      folly::Executor&);
-  void removeConnection(std::shared_ptr<rsocket::RSocketStateMachine>);
 
-  //////////////////////////////////////////////////////////////////////////////
+  void onRSocketSetup(
+      OnRSocketSetup onRSocketSetup,
+      yarpl::Reference<rsocket::FrameTransport> frameTransport,
+      rsocket::SetupParameters setupPayload);
+  bool onRSocketResume(
+      OnRSocketResume onRSocketResume,
+      yarpl::Reference<rsocket::FrameTransport> frameTransport,
+      rsocket::ResumeParameters setupPayload);
 
-  std::unique_ptr<ConnectionAcceptor> lazyAcceptor_;
-  rsocket::ServerConnectionAcceptor acceptor_;
+  std::unique_ptr<ConnectionAcceptor> duplexConnectionAcceptor_;
   bool started{false};
 
-  /// Set of currently open ReactiveSockets.
-  folly::Synchronized<
-      std::unordered_map<
-          std::shared_ptr<rsocket::RSocketStateMachine>,
-          folly::Executor&>,
-      std::mutex>
-      sockets_;
+  class SetupResumeAcceptorTag{};
+  folly::ThreadLocal<rsocket::SetupResumeAcceptor, SetupResumeAcceptorTag> setupResumeAcceptors_;
 
   folly::Baton<> waiting_;
-  folly::Optional<folly::Baton<>> shutdown_;
+  std::atomic<bool> isShutdown_{false};
+
+  std::unique_ptr<RSocketConnectionManager> connectionManager_;
 };
 } // namespace rsocket

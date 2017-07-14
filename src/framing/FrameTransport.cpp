@@ -1,11 +1,17 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "FrameTransport.h"
+#include "src/framing/FrameTransport.h"
+
 #include <folly/ExceptionWrapper.h>
+#include <folly/io/IOBuf.h>
+#include <glog/logging.h>
+
 #include "src/DuplexConnection.h"
-#include "src/framing/Frame.h"
+#include "src/framing/FrameProcessor.h"
 
 namespace rsocket {
+
+using namespace yarpl::flowable;
 
 FrameTransport::FrameTransport(std::unique_ptr<DuplexConnection> connection)
     : connection_(std::move(connection)) {
@@ -17,36 +23,35 @@ FrameTransport::~FrameTransport() {
 }
 
 void FrameTransport::connect() {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  Lock lock(mutex_);
 
   DCHECK(connection_);
 
   if (connectionOutput_) {
-    // already connected
+    // Already connected.
     return;
   }
 
   connectionOutput_ = connection_->getOutput();
-  connectionOutput_->onSubscribe(shared_from_this());
+  connectionOutput_->onSubscribe(yarpl::get_ref(this));
 
-  // the onSubscribe call on the previous line may have called the terminating
-  // signal which would call disconnect/close
+  // The onSubscribe call on the previous line may have called the terminating
+  // signal which would call disconnect/close.
   if (connection_) {
     // This may call ::onSubscribe in-line, which calls ::request on the
-    // provided
-    // subscription, which might deliver frames in-line.
-    // it can also call onComplete which will call disconnect/close and reset
-    // the connection_ while still inside of the connection_::setInput method.
-    // We will create a hard reference for that case and keep the object alive
+    // provided subscription, which might deliver frames in-line.  It can also
+    // call onComplete which will call disconnect/close and reset the
+    // connection_ while still inside of the connection_::setInput method.  We
+    // will create a hard reference for that case and keep the object alive
     // until setInput method returns
     auto connectionCopy = connection_;
-    connectionCopy->setInput(shared_from_this());
+    connectionCopy->setInput(yarpl::get_ref(this));
   }
 }
 
 void FrameTransport::setFrameProcessor(
     std::shared_ptr<FrameProcessor> frameProcessor) {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  Lock lock(mutex_);
 
   frameProcessor_ = std::move(frameProcessor);
   if (frameProcessor_) {
@@ -54,24 +59,26 @@ void FrameTransport::setFrameProcessor(
     connect();
   }
 
-  drainOutputFramesQueue();
-  if (frameProcessor_) {
-    while (!pendingReads_.empty()) {
-      auto frame = std::move(pendingReads_.front());
-      pendingReads_.pop_front();
-      frameProcessor_->processFrame(std::move(frame));
-    }
-    if (pendingTerminal_) {
-      terminateFrameProcessor(std::move(*pendingTerminal_));
-      pendingTerminal_ = folly::none;
-    }
-  }
+  drainWrites(lock);
+  drainReads(lock);
 }
 
-void FrameTransport::close(folly::exception_wrapper ex) {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+void FrameTransport::close() {
+  closeImpl(folly::exception_wrapper());
+}
 
-  // just making sure we will never try to call back onto the processor
+void FrameTransport::closeWithError(folly::exception_wrapper ew) {
+  if (!ew) {
+    VLOG(1) << "FrameTransport::closeWithError() called with empty exception";
+    ew = std::runtime_error("Undefined error");
+  }
+  closeImpl(std::move(ew));
+}
+
+void FrameTransport::closeImpl(folly::exception_wrapper ew) {
+  Lock lock(mutex_);
+
+  // Make sure we never try to call back into the processor.
   frameProcessor_ = nullptr;
 
   if (!connection_) {
@@ -81,11 +88,11 @@ void FrameTransport::close(folly::exception_wrapper ex) {
   auto oldConnection = std::move(connection_);
 
   // Send terminal signals to the DuplexConnection's input and output before
-  // tearing it down. We must do this per DuplexConnection specification (see
+  // tearing it down.  We must do this per DuplexConnection specification (see
   // interface definition).
   if (auto subscriber = std::move(connectionOutput_)) {
-    if (ex) {
-      subscriber->onError(std::move(ex));
+    if (ew) {
+      subscriber->onError(ew.to_exception_ptr());
     } else {
       subscriber->onComplete();
     }
@@ -95,9 +102,8 @@ void FrameTransport::close(folly::exception_wrapper ex) {
   }
 }
 
-void FrameTransport::onSubscribe(
-    std::shared_ptr<Subscription> subscription) noexcept {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+void FrameTransport::onSubscribe(yarpl::Reference<Subscription> subscription) {
+  Lock lock(mutex_);
 
   if (!connection_) {
     return;
@@ -106,11 +112,11 @@ void FrameTransport::onSubscribe(
   CHECK(!connectionInputSub_);
   CHECK(frameProcessor_);
   connectionInputSub_ = std::move(subscription);
-  connectionInputSub_->request(std::numeric_limits<size_t>::max());
+  connectionInputSub_->request(kMaxRequestN);
 }
 
-void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) noexcept {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) {
+  Lock lock(mutex_);
 
   if (connection_ && frameProcessor_) {
     frameProcessor_->processFrame(std::move(frame));
@@ -119,12 +125,12 @@ void FrameTransport::onNext(std::unique_ptr<folly::IOBuf> frame) noexcept {
   }
 }
 
-void FrameTransport::terminateFrameProcessor(folly::exception_wrapper ex) {
-  // this method can be executed multiple times during terminating
+void FrameTransport::terminateProcessor(folly::exception_wrapper ex) {
+  // This method can be executed multiple times while terminating.
 
   std::shared_ptr<FrameProcessor> frameProcessor;
   {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    Lock lock(mutex_);
     if (!frameProcessor_) {
       pendingTerminal_ = std::move(ex);
       return;
@@ -138,22 +144,28 @@ void FrameTransport::terminateFrameProcessor(folly::exception_wrapper ex) {
   }
 }
 
-void FrameTransport::onComplete() noexcept {
+void FrameTransport::onComplete() {
   VLOG(6) << "onComplete";
-  terminateFrameProcessor(folly::exception_wrapper());
+  terminateProcessor(folly::exception_wrapper());
 }
 
-void FrameTransport::onError(folly::exception_wrapper ex) noexcept {
-  VLOG(6) << "onError" << ex.what();
-  terminateFrameProcessor(std::move(ex));
+void FrameTransport::onError(std::exception_ptr eptr) {
+  VLOG(6) << "onError" << folly::exceptionStr(eptr);
+
+  try {
+    std::rethrow_exception(eptr);
+  } catch (const std::exception& exn) {
+    folly::exception_wrapper ew{std::move(eptr), exn};
+    terminateProcessor(std::move(ew));
+  }
 }
 
-void FrameTransport::request(size_t n) noexcept {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+void FrameTransport::request(int64_t n) {
+  Lock lock(mutex_);
 
   if (!connection_) {
-    // request(n) can be delivered during disconnecting
-    // we don't care for it anymore
+    // request(n) can be delivered during disconnecting.  We don't care for it
+    // anymore.
     return;
   }
 
@@ -162,62 +174,60 @@ void FrameTransport::request(size_t n) noexcept {
     // stack.
     return;
   }
-  drainOutputFramesQueue();
+
+  drainWrites(lock);
 }
 
-void FrameTransport::cancel() noexcept {
+void FrameTransport::cancel() {
   VLOG(6) << "cancel";
-  terminateFrameProcessor(folly::exception_wrapper());
+  terminateProcessor(folly::exception_wrapper());
 }
 
 void FrameTransport::outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame) {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  Lock lock(mutex_);
 
-  // We allow sending frames even without a frame processor so it's possible
-  // to send terminal frames without expecting anything in return
+  // We allow sending frames even without a frame processor so it's possible to
+  // send terminal frames without expecting anything in return.
   if (connection_) {
-    drainOutputFramesQueue();
+    drainWrites(lock);
     if (pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
-      // TODO: temporary disabling VLOG as we don't know the correct
-      // frame serializer here. There is refactoring of this class planned
-      // which will allow enabling it again.
-      // VLOG(3) << this << " writing frame " << FrameHeader::peekType(*frame);
-
       connectionOutput_->onNext(std::move(frame));
       return;
     }
   }
-  // TODO: temporary disabling VLOG as we don't know the correct
-  // frame serializer here. There is refactoring of this class planned
-  // which will allow enabling it again.
-  // VLOG(3) << this << " queuing frame " << FrameHeader::peekType(*frame);
 
-  // We either have no allowance to perform the operation, or the queue has
-  // not been drained (e.g. we're looping in ::request).
-  // or we are disconnected
+  // We either have no allowance to perform the operation, or the queue has not
+  // been drained (e.g. we're looping in ::request), or we are disconnected.
   pendingWrites_.emplace_back(std::move(frame));
 }
 
-void FrameTransport::drainOutputFramesQueue() {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+void FrameTransport::drainReads(const FrameTransport::Lock&) {
+  if (!frameProcessor_) {
+    return;
+  }
 
-  if (connection_) {
-    // Drain the queue or the allowance.
-    while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
-      auto frame = std::move(pendingWrites_.front());
-      // TODO: temporary disabling VLOG as we don't know the correct
-      // frame serializer here. There is refactoring of this class planned
-      // which will allow enabling it again.
-      // VLOG(3) << this << " flushing frame " << FrameHeader::peekType(*frame);
-      pendingWrites_.pop_front();
-      connectionOutput_->onNext(std::move(frame));
-    }
+  while (!pendingReads_.empty()) {
+    auto frame = std::move(pendingReads_.front());
+    pendingReads_.pop_front();
+    frameProcessor_->processFrame(std::move(frame));
+  }
+
+  if (pendingTerminal_) {
+    terminateProcessor(std::move(*pendingTerminal_));
+    pendingTerminal_ = folly::none;
   }
 }
 
-DuplexConnection* FrameTransport::duplexConnection() const {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  return connection_.get();
-}
+void FrameTransport::drainWrites(const FrameTransport::Lock&) {
+  if (!connection_) {
+    return;
+  }
 
-} // reactivesocket
+  // Drain the queue or the allowance.
+  while (!pendingWrites_.empty() && writeAllowance_.tryAcquire()) {
+    auto frame = std::move(pendingWrites_.front());
+    pendingWrites_.pop_front();
+    connectionOutput_->onNext(std::move(frame));
+  }
+}
+}

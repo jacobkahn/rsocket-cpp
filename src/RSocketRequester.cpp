@@ -1,31 +1,17 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "RSocketRequester.h"
-#include "src/temporary_home/OldNewBridge.h"
-#include "yarpl/Flowable.h"
-#include <folly/ExceptionWrapper.h>
-#include "internal/ScheduledSubscriber.h"
+#include "src/RSocketRequester.h"
 
-using namespace rsocket;
+#include <folly/ExceptionWrapper.h>
+
+#include "src/internal/ScheduledSingleObserver.h"
+#include "src/internal/ScheduledSubscriber.h"
+#include "yarpl/Flowable.h"
+
 using namespace folly;
 using namespace yarpl;
 
 namespace rsocket {
-
-std::shared_ptr<RSocketRequester> RSocketRequester::create(
-    std::shared_ptr<RSocketStateMachine> srs,
-    EventBase& eventBase) {
-  auto customDeleter = [&eventBase](RSocketRequester* pRequester) {
-    eventBase.runImmediatelyOrRunInEventBaseThreadAndWait([&pRequester] {
-      LOG(INFO) << "RSocketRequester => destroy on EventBase";
-      delete pRequester;
-    });
-  };
-
-  auto* rsr = new RSocketRequester(std::move(srs), eventBase);
-  std::shared_ptr<RSocketRequester> sR(rsr, customDeleter);
-  return sR;
-}
 
 RSocketRequester::RSocketRequester(
     std::shared_ptr<RSocketStateMachine> srs,
@@ -33,14 +19,29 @@ RSocketRequester::RSocketRequester(
     : stateMachine_(std::move(srs)), eventBase_(eventBase) {}
 
 RSocketRequester::~RSocketRequester() {
-  LOG(INFO) << "RSocketRequester => destroy";
-  stateMachine_->close(folly::exception_wrapper(), StreamCompletionSignal::CONNECTION_END);
+  VLOG(1) << "Destroying RSocketRequester";
+
+  if (stateMachine_) {
+    eventBase_.add([stateMachine = std::move(stateMachine_)] {
+      VLOG(2) << "Releasing RSocketStateMachine on EventBase";
+    });
+  }
+}
+
+void RSocketRequester::closeSocket() {
+  eventBase_.add([stateMachine = std::move(stateMachine_)]{
+    VLOG(2) << "Closing RSocketStateMachine on EventBase";
+    stateMachine->close(
+        folly::exception_wrapper(), StreamCompletionSignal::SOCKET_CLOSED);
+  });
 }
 
 yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
 RSocketRequester::requestChannel(
     yarpl::Reference<yarpl::flowable::Flowable<rsocket::Payload>>
     requestStream) {
+  CHECK(stateMachine_); // verify the socket was not closed
+
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
       eb = &eventBase_,
       requestStream = std::move(requestStream),
@@ -67,6 +68,8 @@ RSocketRequester::requestChannel(
 
 yarpl::Reference<yarpl::flowable::Flowable<Payload>>
 RSocketRequester::requestStream(Payload request) {
+  CHECK(stateMachine_); // verify the socket was not closed
+
   return yarpl::flowable::Flowables::fromPublisher<Payload>([
       eb = &eventBase_,
       request = std::move(request),
@@ -89,62 +92,30 @@ RSocketRequester::requestStream(Payload request) {
 
 yarpl::Reference<yarpl::single::Single<rsocket::Payload>>
 RSocketRequester::requestResponse(Payload request) {
-  // TODO bridge in use until SingleSubscriber is used internally
-  class SingleToSubscriberBridge : public yarpl::flowable::Subscriber<Payload> {
-   public:
-    SingleToSubscriberBridge(
-        yarpl::Reference<yarpl::single::SingleObserver<Payload>>
-        singleSubscriber)
-        : singleSubscriber_{std::move(singleSubscriber)} {}
-
-    void onSubscribe(yarpl::Reference<yarpl::flowable::Subscription>
-                     subscription) override {
-      // register cancellation callback with SingleSubscriber
-      auto singleSubscription = yarpl::single::SingleSubscriptions::create(
-          [subscription] { subscription->cancel(); });
-
-      singleSubscriber_->onSubscribe(std::move(singleSubscription));
-
-      // kick off request (TODO this is not needed once we use the proper type)
-      // this is executed on the correct subscription's eventBase
-      subscription->request(1);
-    }
-
-    void onNext(Payload payload) override {
-      singleSubscriber_->onSuccess(std::move(payload));
-    }
-
-    void onComplete() override {
-      // ignore as we're done once we get a single value back
-    }
-
-    void onError(std::exception_ptr ex) override {
-      DLOG(ERROR) << folly::exceptionStr(ex);
-      singleSubscriber_->onError(std::move(ex));
-    }
-
-   private:
-    yarpl::Reference<yarpl::single::SingleObserver<Payload>> singleSubscriber_;
-  };
+  CHECK(stateMachine_); // verify the socket was not closed
 
   return yarpl::single::Single<Payload>::create(
   [eb = &eventBase_, request = std::move(request), srs = stateMachine_](
       yarpl::Reference<yarpl::single::SingleObserver<Payload>>
-  subscriber) mutable {
+  observer) mutable {
     eb->runInEventBaseThread([
         request = std::move(request),
-        subscriber = std::move(subscriber),
+        observer = std::move(observer),
+        eb,
         srs = std::move(srs)
     ]() mutable {
       srs->streamsFactory().createRequestResponseRequester(
           std::move(request),
-          make_ref<SingleToSubscriberBridge>(std::move(subscriber)));
+          yarpl::make_ref<ScheduledSubscriptionSingleObserver<Payload>>(
+              std::move(observer), *eb));
     });
   });
 }
 
 yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
     rsocket::Payload request) {
+  CHECK(stateMachine_); // verify the socket was not closed
+
   return yarpl::single::Single<void>::create([
       eb = &eventBase_,
       request = std::move(request),
@@ -166,9 +137,11 @@ yarpl::Reference<yarpl::single::Single<void>> RSocketRequester::fireAndForget(
 }
 
 void RSocketRequester::metadataPush(std::unique_ptr<folly::IOBuf> metadata) {
+  CHECK(stateMachine_); // verify the socket was not closed
+
   eventBase_.runInEventBaseThread(
-      [this, metadata = std::move(metadata)]() mutable {
-        stateMachine_->metadataPush(std::move(metadata));
+      [srs = stateMachine_, metadata = std::move(metadata)]() mutable {
+        srs->metadataPush(std::move(metadata));
       });
 }
 }

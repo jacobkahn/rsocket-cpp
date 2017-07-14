@@ -1,3 +1,5 @@
+// Copyright 2004-present Facebook. All Rights Reserved.
+
 #pragma once
 
 #include <memory>
@@ -10,13 +12,13 @@
 #include "yarpl/Scheduler.h"
 #include "yarpl/utils/type_traits.h"
 
-#include "../Refcounted.h"
-#include "Observer.h"
-#include "Observers.h"
-#include "Subscription.h"
+#include "yarpl/Refcounted.h"
+#include "yarpl/observable/Observer.h"
+#include "yarpl/observable/Observers.h"
+#include "yarpl/observable/Subscription.h"
 
-#include "../Flowable.h"
-#include "yarpl/flowable/sources/Flowable_FromObservable.h"
+#include "yarpl/Flowable.h"
+#include "yarpl/flowable/Flowable_FromObservable.h"
 
 namespace yarpl {
 namespace observable {
@@ -29,15 +31,10 @@ enum class BackpressureStrategy { DROP };
 template <typename T>
 class Observable : public virtual Refcounted {
  public:
-  static const auto CANCELED = std::numeric_limits<int64_t>::min();
-  static const auto NO_FLOW_CONTROL = std::numeric_limits<int64_t>::max();
-
   virtual void subscribe(Reference<Observer<T>>) = 0;
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
    */
   template <
       typename Next,
@@ -49,26 +46,19 @@ class Observable : public virtual Refcounted {
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
-   * @param error
    */
   template <
       typename Next,
       typename Error,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value>::type>
+          std::is_callable<Error(std::exception_ptr), void>::value>::type>
   void subscribe(Next&& next, Error&& error) {
     subscribe(Observers::create<T>(next, error));
   }
 
   /**
    * Subscribe overload that accepts lambdas.
-   *
-   * @param next
-   * @param error
-   * @param complete
    */
   template <
       typename Next,
@@ -76,7 +66,7 @@ class Observable : public virtual Refcounted {
       typename Complete,
       typename = typename std::enable_if<
           std::is_callable<Next(T), void>::value &&
-          std::is_callable<Error(const std::exception_ptr), void>::value &&
+          std::is_callable<Error(std::exception_ptr), void>::value &&
           std::is_callable<Complete(), void>::value>::type>
   void subscribe(Next&& next, Error&& error, Complete&& complete) {
     subscribe(Observers::create<T>(next, error, complete));
@@ -91,7 +81,14 @@ class Observable : public virtual Refcounted {
   template <typename Function>
   auto filter(Function&& function);
 
+  template <typename Function>
+  auto reduce(Function&& function);
+
   auto take(int64_t);
+
+  auto skip(int64_t);
+
+  auto ignoreElements();
 
   auto subscribeOn(Scheduler&);
 
@@ -99,16 +96,13 @@ class Observable : public virtual Refcounted {
   * Convert from Observable to Flowable with a given BackpressureStrategy.
   *
   * Currently the only strategy is DROP.
-  *
-  * @param strategy
-  * @return
   */
   auto toFlowable(BackpressureStrategy strategy);
 };
 } // observable
 } // yarpl
 
-#include "ObservableOperator.h"
+#include "yarpl/observable/ObservableOperator.h"
 
 namespace yarpl {
 namespace observable {
@@ -140,9 +134,29 @@ auto Observable<T>::filter(Function&& function) {
 }
 
 template <typename T>
+template <typename Function>
+auto Observable<T>::reduce(Function&& function) {
+  using D = typename std::result_of<Function(T, T)>::type;
+  return Reference<Observable<D>>(new ReduceOperator<T, D, Function>(
+      Reference<Observable<T>>(this), std::forward<Function>(function)));
+}
+
+template <typename T>
 auto Observable<T>::take(int64_t limit) {
   return Reference<Observable<T>>(
       new TakeOperator<T>(Reference<Observable<T>>(this), limit));
+}
+
+template <typename T>
+auto Observable<T>::skip(int64_t offset) {
+  return Reference<Observable<T>>(
+      new SkipOperator<T>(Reference<Observable<T>>(this), offset));
+}
+
+template <typename T>
+auto Observable<T>::ignoreElements() {
+  return Reference<Observable<T>>(
+      new IgnoreElementsOperator<T>(Reference<Observable<T>>(this)));
 }
 
 template <typename T>

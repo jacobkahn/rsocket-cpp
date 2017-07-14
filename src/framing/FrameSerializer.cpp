@@ -1,11 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "FrameSerializer.h"
+#include "src/framing/FrameSerializer.h"
+
 #include <folly/Conv.h>
 #include <folly/portability/GFlags.h>
-#include "FrameSerializer_v0.h"
-#include "FrameSerializer_v0_1.h"
-#include "FrameSerializer_v1_0.h"
+
+#include "src/framing/FrameSerializer_v0.h"
+#include "src/framing/FrameSerializer_v0_1.h"
+#include "src/framing/FrameSerializer_v1_0.h"
 
 DEFINE_string(
     rs_use_protocol_version,
@@ -15,9 +17,8 @@ DEFINE_string(
 
 namespace rsocket {
 
-// TODO: this should default to 1.0 when we deploy successfully
 constexpr const ProtocolVersion ProtocolVersion::Latest =
-    FrameSerializerV0_1::Version;
+    FrameSerializerV1_0::Version;
 
 ProtocolVersion FrameSerializer::getCurrentProtocolVersion() {
   if (FLAGS_rs_use_protocol_version.empty()) {

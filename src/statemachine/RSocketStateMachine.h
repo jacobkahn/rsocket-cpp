@@ -4,31 +4,31 @@
 
 #include <list>
 #include <memory>
-#include "StreamsFactory.h"
-#include "StreamsHandler.h"
+
 #include "src/DuplexConnection.h"
 #include "src/Payload.h"
-#include "src/framing/Frame.h"
+#include "src/RSocketParameters.h"
 #include "src/framing/FrameProcessor.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/framing/FrameTransport.h"
-#include "src/internal/AllowanceSemaphore.h"
 #include "src/internal/Common.h"
-#include "src/temporary_home/Executor.h"
+#include "src/statemachine/StreamsFactory.h"
+#include "src/statemachine/StreamsWriter.h"
 
 namespace rsocket {
 
-class StreamStateMachineBase;
 class ClientResumeStatusCallback;
-class RSocketStateMachine;
 class DuplexConnection;
 class Frame_ERROR;
+class FrameSerializer;
+class FrameTransport;
 class KeepaliveTimer;
-class RequestHandler;
 class ResumeCache;
+class RSocketNetworkStats;
+class RSocketParameters;
+class RSocketResponder;
+class RSocketStateMachine;
 class RSocketStats;
 class StreamState;
-class RSocketParameters;
+class StreamStateMachineBase;
 
 class FrameSink {
  public:
@@ -55,16 +55,16 @@ class FrameSink {
 class RSocketStateMachine final
     : public FrameSink,
       public FrameProcessor,
-      ExecutorBase,
       public StreamsWriter,
       public std::enable_shared_from_this<RSocketStateMachine> {
  public:
   RSocketStateMachine(
       folly::Executor& executor,
-      std::shared_ptr<RequestHandler> requestHandler,
-      std::shared_ptr<RSocketStats> stats,
+      std::shared_ptr<RSocketResponder> requestResponder,
       std::unique_ptr<KeepaliveTimer> keepaliveTimer_,
-      ReactiveSocketMode mode);
+      ReactiveSocketMode mode,
+      std::shared_ptr<RSocketStats> stats,
+      std::shared_ptr<RSocketNetworkStats> networkStats = std::shared_ptr<RSocketNetworkStats>());
 
   void closeWithError(Frame_ERROR&& error);
   void disconnectOrCloseWithError(Frame_ERROR&& error) override;
@@ -73,10 +73,9 @@ class RSocketStateMachine final
   ///
   /// May result, depending on the implementation of the DuplexConnection, in
   /// processing of one or more frames.
-  bool connect(
-      std::shared_ptr<FrameTransport>,
-      bool sendingPendingFrames,
-      ProtocolVersion protocolVersion);
+  bool connectServer(
+      yarpl::Reference<FrameTransport>,
+      const SetupParameters& setupParams);
 
   /// Disconnects DuplexConnection from the stateMachine.
   /// Existing streams will stay intact.
@@ -88,11 +87,9 @@ class RSocketStateMachine final
   /// StreamAutomatonBase attached to this ConnectionAutomaton.
   void close(folly::exception_wrapper, StreamCompletionSignal);
 
-  std::shared_ptr<FrameTransport> detachFrameTransport();
-
   /// Terminate underlying connection and connect new connection
   void reconnect(
-      std::shared_ptr<FrameTransport>,
+      yarpl::Reference<FrameTransport>,
       std::unique_ptr<ClientResumeStatusCallback>);
 
   ~RSocketStateMachine();
@@ -136,11 +133,16 @@ class RSocketStateMachine final
   void sendKeepalive(std::unique_ptr<folly::IOBuf> data) override;
 
   void setResumable(bool resumable);
-  Frame_RESUME createResumeFrame(const ResumeIdentificationToken& token) const;
 
   bool isPositionAvailable(ResumePosition position);
 
   void outputFrameOrEnqueue(std::unique_ptr<folly::IOBuf> frame);
+
+  template<typename T>
+  void outputFrameOrEnqueue(T&& frame) {
+    VLOG(3) << "Out: " << frame;
+    outputFrameOrEnqueue(frameSerializer_->serializeOut(std::forward<T>(frame)));
+  }
 
   void requestFireAndForget(Payload request);
 
@@ -174,29 +176,23 @@ class RSocketStateMachine final
       ResumePosition serverPosition,
       ResumePosition clientPosition);
 
-  void addConnectedListener(std::function<void()> listener);
-  void addDisconnectedListener(ErrorCallback listener);
-  void addClosedListener(ErrorCallback listener);
-
   uint32_t getKeepaliveTime() const;
   bool isDisconnectedOrClosed() const;
   bool isClosed() const;
 
-  DuplexConnection* duplexConnection() const;
   StreamsFactory& streamsFactory() {
     return streamsFactory_;
   }
 
-  ProtocolVersion getSerializerProtocolVersion();
-  void setUpFrame(
-      std::shared_ptr<FrameTransport> frameTransport,
-      SetupParameters setupPayload);
+  void connectClientSendSetup(
+      std::unique_ptr<DuplexConnection> connection,
+      SetupParameters setupParams);
 
   void metadataPush(std::unique_ptr<folly::IOBuf> metadata);
 
   void tryClientResume(
       const ResumeIdentificationToken& token,
-      std::shared_ptr<FrameTransport> frameTransport,
+      yarpl::Reference<FrameTransport> frameTransport,
       std::unique_ptr<ClientResumeStatusCallback> resumeCallback);
 
   void setFrameSerializer(std::unique_ptr<FrameSerializer>);
@@ -205,7 +201,17 @@ class RSocketStateMachine final
     return *stats_;
   }
 
+  std::shared_ptr<RSocketNetworkStats>& networkStats() {
+    return networkStats_;
+  }
+
  private:
+
+  bool connect(
+      yarpl::Reference<FrameTransport>,
+      bool sendingPendingFrames,
+      ProtocolVersion protocolVersion);
+
   /// Performs the same actions as ::endStream without propagating closure
   /// signal to the underlying connection.
   ///
@@ -268,7 +274,6 @@ class RSocketStateMachine final
 
   bool ensureOrAutodetectFrameSerializer(const folly::IOBuf& firstFrame);
 
-  const std::shared_ptr<RSocketStats> stats_;
   ReactiveSocketMode mode_;
   bool isResumable_{false};
   bool remoteResumeable_{false};
@@ -276,18 +281,18 @@ class RSocketStateMachine final
 
   std::shared_ptr<ResumeCache> resumeCache_;
   std::shared_ptr<StreamState> streamState_;
-  std::shared_ptr<RequestHandler> requestHandler_;
-  std::shared_ptr<FrameTransport> frameTransport_;
+  std::shared_ptr<RSocketResponder> requestResponder_;
+  yarpl::Reference<FrameTransport> frameTransport_;
   std::unique_ptr<FrameSerializer> frameSerializer_;
-
-  std::list<std::function<void()>> onConnectListeners_;
-  std::list<ErrorCallback> onDisconnectListeners_;
-  std::list<ErrorCallback> onCloseListeners_;
 
   const std::unique_ptr<KeepaliveTimer> keepaliveTimer_;
 
   std::unique_ptr<ClientResumeStatusCallback> resumeCallback_;
 
   StreamsFactory streamsFactory_;
+
+  const std::shared_ptr<RSocketStats> stats_;
+  std::shared_ptr<RSocketNetworkStats> networkStats_;
+  folly::Executor& executor_;
 };
 }
