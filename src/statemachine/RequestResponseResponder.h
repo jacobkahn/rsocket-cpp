@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "src/statemachine/StreamStateMachineBase.h"
+#include "rsocket/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/single/SingleObserver.h"
 #include "yarpl/single/SingleSubscription.h"

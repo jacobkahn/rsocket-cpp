@@ -3,8 +3,8 @@
 #pragma once
 
 #include <iosfwd>
-#include "src/Payload.h"
-#include "src/statemachine/StreamStateMachineBase.h"
+#include "rsocket/Payload.h"
+#include "rsocket/statemachine/StreamStateMachineBase.h"
 #include "yarpl/single/SingleObserver.h"
 #include "yarpl/single/SingleSubscription.h"
 

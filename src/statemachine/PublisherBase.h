@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "src/Payload.h"
-#include "src/internal/AllowanceSemaphore.h"
+#include "rsocket/Payload.h"
+#include "rsocket/internal/AllowanceSemaphore.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {

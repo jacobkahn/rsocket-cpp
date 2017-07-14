@@ -1,12 +1,12 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/transports/tcp/TcpConnectionFactory.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
 
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <glog/logging.h>
 
-#include "src/transports/tcp/TcpDuplexConnection.h"
+#include "rsocket/transports/tcp/TcpDuplexConnection.h"
 
 using namespace rsocket;
 

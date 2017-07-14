@@ -8,7 +8,7 @@
 #include <src/RSocketStats.h>
 #include <src/transports/tcp/TcpDuplexConnection.h>
 
-#include "src/Payload.h"
+#include "rsocket/Payload.h"
 
 namespace rsocket {
 

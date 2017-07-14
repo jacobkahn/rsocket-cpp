@@ -1,11 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/StreamStateMachineBase.h"
+#include "rsocket/statemachine/StreamStateMachineBase.h"
 
 #include <folly/io/IOBuf.h>
 
-#include "src/statemachine/RSocketStateMachine.h"
-#include "src/statemachine/StreamsWriter.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/StreamsWriter.h"
 
 namespace rsocket {
 

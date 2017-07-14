@@ -4,7 +4,7 @@
 
 #include <folly/Optional.h>
 
-#include "src/DuplexConnection.h"
+#include "rsocket/DuplexConnection.h"
 
 namespace folly {
 class EventBase;

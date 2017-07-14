@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "src/RSocketParameters.h"
+#include "rsocket/RSocketParameters.h"
 #include "yarpl/Refcounted.h"
 
 namespace folly {

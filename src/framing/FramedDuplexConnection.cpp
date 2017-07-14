@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/framing/FramedDuplexConnection.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/framing/FramedReader.h"
-#include "src/framing/FramedWriter.h"
+#include "rsocket/framing/FramedDuplexConnection.h"
+#include "rsocket/framing/FrameSerializer.h"
+#include "rsocket/framing/FramedReader.h"
+#include "rsocket/framing/FramedWriter.h"
 
 namespace rsocket {
 

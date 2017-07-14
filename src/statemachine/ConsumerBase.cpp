@@ -1,11 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/ConsumerBase.h"
+#include "rsocket/statemachine/ConsumerBase.h"
 
 #include <glog/logging.h>
 #include <algorithm>
 
-#include "src/Payload.h"
+#include "rsocket/Payload.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {

@@ -4,11 +4,11 @@
 
 #include <folly/futures/Future.h>
 
-#include "src/ConnectionFactory.h"
-#include "src/RSocketNetworkStats.h"
-#include "src/RSocketParameters.h"
-#include "src/RSocketRequester.h"
-#include "src/RSocketStats.h"
+#include "rsocket/ConnectionFactory.h"
+#include "rsocket/RSocketNetworkStats.h"
+#include "rsocket/RSocketParameters.h"
+#include "rsocket/RSocketRequester.h"
+#include "rsocket/RSocketStats.h"
 
 namespace rsocket {
 

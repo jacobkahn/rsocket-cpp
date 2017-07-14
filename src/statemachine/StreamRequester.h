@@ -3,8 +3,8 @@
 #pragma once
 
 #include <iosfwd>
-#include "src/internal/AllowanceSemaphore.h"
-#include "src/statemachine/ConsumerBase.h"
+#include "rsocket/internal/AllowanceSemaphore.h"
+#include "rsocket/statemachine/ConsumerBase.h"
 
 namespace folly {
 class exception_wrapper;

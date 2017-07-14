@@ -8,7 +8,7 @@
 
 #include <folly/ExceptionWrapper.h>
 
-#include "src/internal/Common.h"
+#include "rsocket/internal/Common.h"
 #include "yarpl/Refcounted.h"
 
 namespace folly {

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <folly/io/IOBufQueue.h>
-#include "src/internal/AllowanceSemaphore.h"
+#include "rsocket/internal/AllowanceSemaphore.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
 

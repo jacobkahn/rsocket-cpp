@@ -1,9 +1,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/Payload.h"
+#include "rsocket/Payload.h"
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
-#include "src/framing/Frame.h"
+#include "rsocket/framing/Frame.h"
 
 namespace rsocket {
 

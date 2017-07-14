@@ -1,12 +1,12 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/internal/ResumeCache.h"
+#include "rsocket/internal/ResumeCache.h"
 
 #include <algorithm>
 
-#include "src/framing/Frame.h"
-#include "src/framing/FrameTransport.h"
-#include "src/statemachine/RSocketStateMachine.h"
+#include "rsocket/framing/Frame.h"
+#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
 
 namespace {
 

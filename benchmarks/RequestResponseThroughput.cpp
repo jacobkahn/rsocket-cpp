@@ -7,8 +7,8 @@
 #include <iostream>
 #include <thread>
 #include <gflags/gflags.h>
-#include "src/RSocket.h"
-#include "src/transports/tcp/TcpConnectionFactory.h"
+#include "rsocket/RSocket.h"
+#include "rsocket/transports/tcp/TcpConnectionFactory.h"
 #include "yarpl/Flowable.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"

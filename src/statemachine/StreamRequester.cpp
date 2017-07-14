@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/StreamRequester.h"
+#include "rsocket/statemachine/StreamRequester.h"
 
 namespace rsocket {
 

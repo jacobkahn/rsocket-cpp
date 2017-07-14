@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <string>
-#include "src/internal/Common.h"
+#include "rsocket/internal/Common.h"
 
 namespace rsocket {
 

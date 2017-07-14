@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "src/internal/Common.h"
+#include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
 #include "yarpl/single/SingleObserver.h"

@@ -3,8 +3,8 @@
 #pragma once
 
 #include <iosfwd>
-#include "src/statemachine/PublisherBase.h"
-#include "src/statemachine/StreamStateMachineBase.h"
+#include "rsocket/statemachine/PublisherBase.h"
+#include "rsocket/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {

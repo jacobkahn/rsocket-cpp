@@ -1,13 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/framing/FrameTransport.h"
+#include "rsocket/framing/FrameTransport.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/IOBuf.h>
 #include <glog/logging.h>
 
-#include "src/DuplexConnection.h"
-#include "src/framing/FrameProcessor.h"
+#include "rsocket/DuplexConnection.h"
+#include "rsocket/framing/FrameProcessor.h"
 
 namespace rsocket {
 

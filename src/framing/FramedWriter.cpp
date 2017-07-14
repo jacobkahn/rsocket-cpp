@@ -1,10 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/framing/FramedWriter.h"
+#include "rsocket/framing/FramedWriter.h"
 
 #include <folly/io/Cursor.h>
 
-#include "src/framing/FrameSerializer_v1_0.h"
+#include "rsocket/framing/FrameSerializer_v1_0.h"
 
 namespace rsocket {
 

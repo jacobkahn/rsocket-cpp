@@ -1,10 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/PublisherBase.h"
+#include "rsocket/statemachine/PublisherBase.h"
 
 #include <glog/logging.h>
 
-#include "src/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
 
 namespace rsocket {
 

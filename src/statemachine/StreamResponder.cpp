@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/StreamResponder.h"
+#include "rsocket/statemachine/StreamResponder.h"
 #include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {

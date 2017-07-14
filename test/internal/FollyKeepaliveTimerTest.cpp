@@ -9,7 +9,7 @@
 
 #include <src/framing/Frame.h>
 #include <src/internal/FollyKeepaliveTimer.h>
-#include "src/framing/FramedDuplexConnection.h"
+#include "rsocket/framing/FramedDuplexConnection.h"
 
 using namespace ::testing;
 using namespace ::rsocket;

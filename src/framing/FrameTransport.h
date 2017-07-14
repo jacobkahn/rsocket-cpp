@@ -9,8 +9,8 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Optional.h>
 
-#include "src/internal/AllowanceSemaphore.h"
-#include "src/internal/Common.h"
+#include "rsocket/internal/AllowanceSemaphore.h"
+#include "rsocket/internal/Common.h"
 #include "yarpl/flowable/Subscriber.h"
 #include "yarpl/flowable/Subscription.h"
 

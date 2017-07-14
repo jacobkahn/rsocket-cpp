@@ -6,8 +6,8 @@
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
-#include "src/ConnectionFactory.h"
-#include "src/DuplexConnection.h"
+#include "rsocket/ConnectionFactory.h"
+#include "rsocket/DuplexConnection.h"
 
 namespace rsocket {
 

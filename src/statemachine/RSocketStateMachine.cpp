@@ -1,25 +1,25 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/io/async/EventBase.h>
 
-#include "src/DuplexConnection.h"
-#include "src/RSocketNetworkStats.h"
-#include "src/RSocketParameters.h"
-#include "src/RSocketResponder.h"
-#include "src/RSocketStats.h"
-#include "src/framing/Frame.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/framing/FrameTransport.h"
-#include "src/internal/ClientResumeStatusCallback.h"
-#include "src/internal/ResumeCache.h"
-#include "src/statemachine/ChannelResponder.h"
-#include "src/statemachine/StreamState.h"
-#include "src/statemachine/StreamStateMachineBase.h"
+#include "rsocket/DuplexConnection.h"
+#include "rsocket/RSocketNetworkStats.h"
+#include "rsocket/RSocketParameters.h"
+#include "rsocket/RSocketResponder.h"
+#include "rsocket/RSocketStats.h"
+#include "rsocket/framing/Frame.h"
+#include "rsocket/framing/FrameSerializer.h"
+#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/internal/ClientResumeStatusCallback.h"
+#include "rsocket/internal/ResumeCache.h"
+#include "rsocket/statemachine/ChannelResponder.h"
+#include "rsocket/statemachine/StreamState.h"
+#include "rsocket/statemachine/StreamStateMachineBase.h"
 
 namespace rsocket {
 

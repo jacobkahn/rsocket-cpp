@@ -4,7 +4,7 @@
 
 #include <folly/io/async/EventBase.h>
 
-#include "src/internal/ScheduledSingleSubscription.h"
+#include "rsocket/internal/ScheduledSingleSubscription.h"
 #include "yarpl/single/SingleObserver.h"
 #include "yarpl/single/Singles.h"
 

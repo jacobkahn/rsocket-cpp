@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "src/RSocketClient.h"
-#include "src/RSocketServer.h"
+#include "rsocket/RSocketClient.h"
+#include "rsocket/RSocketServer.h"
 
 namespace rsocket {
 

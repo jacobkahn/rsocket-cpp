@@ -4,7 +4,7 @@
 
 #include <folly/io/async/EventBase.h>
 
-#include "src/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
 
 namespace rsocket {
 

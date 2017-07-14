@@ -1,11 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/RSocketRequester.h"
+#include "rsocket/RSocketRequester.h"
 
 #include <folly/ExceptionWrapper.h>
 
-#include "src/internal/ScheduledSingleObserver.h"
-#include "src/internal/ScheduledSubscriber.h"
+#include "rsocket/internal/ScheduledSingleObserver.h"
+#include "rsocket/internal/ScheduledSubscriber.h"
 #include "yarpl/Flowable.h"
 
 using namespace folly;

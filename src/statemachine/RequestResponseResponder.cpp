@@ -1,10 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/RequestResponseResponder.h"
+#include "rsocket/statemachine/RequestResponseResponder.h"
 
 #include <glog/logging.h>
 
-#include "src/Payload.h"
+#include "rsocket/Payload.h"
 #include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {

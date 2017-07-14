@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "src/internal/Common.h"
+#include "rsocket/internal/Common.h"
 
 namespace folly {
 class IOBuf;

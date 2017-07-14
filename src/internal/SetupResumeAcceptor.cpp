@@ -1,16 +1,16 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/internal/SetupResumeAcceptor.h"
+#include "rsocket/internal/SetupResumeAcceptor.h"
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/io/async/EventBaseManager.h>
 
-#include "src/DuplexConnection.h"
-#include "src/RSocketStats.h"
-#include "src/framing/Frame.h"
-#include "src/framing/FrameProcessor.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/framing/FrameTransport.h"
+#include "rsocket/DuplexConnection.h"
+#include "rsocket/RSocketStats.h"
+#include "rsocket/framing/Frame.h"
+#include "rsocket/framing/FrameProcessor.h"
+#include "rsocket/framing/FrameSerializer.h"
+#include "rsocket/framing/FrameTransport.h"
 
 namespace rsocket {
 

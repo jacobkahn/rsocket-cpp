@@ -4,8 +4,8 @@
 
 #include <iosfwd>
 
-#include "src/statemachine/ConsumerBase.h"
-#include "src/statemachine/PublisherBase.h"
+#include "rsocket/statemachine/ConsumerBase.h"
+#include "rsocket/statemachine/PublisherBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {

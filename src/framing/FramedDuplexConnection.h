@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "src/DuplexConnection.h"
-#include "src/internal/Common.h"
+#include "rsocket/DuplexConnection.h"
+#include "rsocket/internal/Common.h"
 
 namespace rsocket {
 

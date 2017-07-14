@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/ChannelResponder.h"
+#include "rsocket/statemachine/ChannelResponder.h"
 #include "yarpl/utils/ExceptionString.h"
 
 namespace rsocket {

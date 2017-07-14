@@ -4,9 +4,9 @@
 
 #include <iosfwd>
 
-#include "src/Payload.h"
-#include "src/statemachine/ConsumerBase.h"
-#include "src/statemachine/PublisherBase.h"
+#include "rsocket/Payload.h"
+#include "rsocket/statemachine/ConsumerBase.h"
+#include "rsocket/statemachine/PublisherBase.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace folly {

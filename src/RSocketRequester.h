@@ -7,8 +7,8 @@
 #include "yarpl/Flowable.h"
 #include "yarpl/Single.h"
 
-#include "src/Payload.h"
-#include "src/statemachine/RSocketStateMachine.h"
+#include "rsocket/Payload.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
 
 namespace rsocket {
 

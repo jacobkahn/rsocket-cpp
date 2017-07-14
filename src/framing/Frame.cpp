@@ -1,13 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/framing/Frame.h"
+#include "rsocket/framing/Frame.h"
 #include <folly/Memory.h>
 #include <folly/Optional.h>
 #include <folly/io/Cursor.h>
 #include <bitset>
 #include <map>
 #include <sstream>
-#include "src/RSocketParameters.h"
+#include "rsocket/RSocketParameters.h"
 
 namespace rsocket {
 

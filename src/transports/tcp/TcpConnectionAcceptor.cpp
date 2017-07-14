@@ -1,13 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/transports/tcp/TcpConnectionAcceptor.h"
+#include "rsocket/transports/tcp/TcpConnectionAcceptor.h"
 
 #include <folly/ThreadName.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 
-#include "src/framing/FramedDuplexConnection.h"
-#include "src/transports/tcp/TcpDuplexConnection.h"
+#include "rsocket/framing/FramedDuplexConnection.h"
+#include "rsocket/transports/tcp/TcpDuplexConnection.h"
 
 namespace rsocket {
 

@@ -1,6 +1,6 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/internal/ScheduledSubscription.h"
+#include "rsocket/internal/ScheduledSubscription.h"
 
 #include <folly/io/async/EventBase.h>
 

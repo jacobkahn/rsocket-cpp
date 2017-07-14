@@ -4,9 +4,9 @@
 
 #include <folly/io/IOBuf.h>
 #include <string>
-#include "src/Payload.h"
-#include "src/framing/FrameSerializer.h"
-#include "src/internal/Common.h"
+#include "rsocket/Payload.h"
+#include "rsocket/framing/FrameSerializer.h"
+#include "rsocket/internal/Common.h"
 
 namespace rsocket {
 

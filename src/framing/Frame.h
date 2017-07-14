@@ -10,7 +10,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/IOBufQueue.h>
 
-#include "src/Payload.h"
+#include "rsocket/Payload.h"
 
 namespace folly {
 template <typename V>

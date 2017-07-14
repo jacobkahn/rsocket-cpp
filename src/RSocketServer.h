@@ -7,11 +7,11 @@
 #include <folly/Baton.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
-#include "src/ConnectionAcceptor.h"
-#include "src/RSocketParameters.h"
-#include "src/RSocketResponder.h"
-#include "src/RSocketSetup.h"
-#include "src/internal/SetupResumeAcceptor.h"
+#include "rsocket/ConnectionAcceptor.h"
+#include "rsocket/RSocketParameters.h"
+#include "rsocket/RSocketResponder.h"
+#include "rsocket/RSocketSetup.h"
+#include "rsocket/internal/SetupResumeAcceptor.h"
 
 namespace rsocket {
 

@@ -1,11 +1,11 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/internal/ScheduledRSocketResponder.h"
+#include "rsocket/internal/ScheduledRSocketResponder.h"
 
 #include <folly/io/async/EventBase.h>
 
-#include "src/internal/ScheduledSingleObserver.h"
-#include "src/internal/ScheduledSubscriber.h"
+#include "rsocket/internal/ScheduledSingleObserver.h"
+#include "rsocket/internal/ScheduledSubscriber.h"
 
 namespace rsocket {
 

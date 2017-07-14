@@ -1,13 +1,13 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/RSocketClient.h"
-#include "src/RSocketRequester.h"
-#include "src/RSocketResponder.h"
-#include "src/RSocketStats.h"
-#include "src/framing/FrameTransport.h"
-#include "src/framing/FramedDuplexConnection.h"
-#include "src/internal/FollyKeepaliveTimer.h"
-#include "src/internal/RSocketConnectionManager.h"
+#include "rsocket/RSocketClient.h"
+#include "rsocket/RSocketRequester.h"
+#include "rsocket/RSocketResponder.h"
+#include "rsocket/RSocketStats.h"
+#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/framing/FramedDuplexConnection.h"
+#include "rsocket/internal/FollyKeepaliveTimer.h"
+#include "rsocket/internal/RSocketConnectionManager.h"
 
 using namespace folly;
 

@@ -1,14 +1,14 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/statemachine/StreamsFactory.h"
+#include "rsocket/statemachine/StreamsFactory.h"
 
-#include "src/statemachine/ChannelRequester.h"
-#include "src/statemachine/ChannelResponder.h"
-#include "src/statemachine/RSocketStateMachine.h"
-#include "src/statemachine/RequestResponseRequester.h"
-#include "src/statemachine/RequestResponseResponder.h"
-#include "src/statemachine/StreamRequester.h"
-#include "src/statemachine/StreamResponder.h"
+#include "rsocket/statemachine/ChannelRequester.h"
+#include "rsocket/statemachine/ChannelResponder.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/RequestResponseRequester.h"
+#include "rsocket/statemachine/RequestResponseResponder.h"
+#include "rsocket/statemachine/StreamRequester.h"
+#include "rsocket/statemachine/StreamResponder.h"
 
 namespace rsocket {
 

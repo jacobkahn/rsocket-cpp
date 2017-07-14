@@ -1,14 +1,14 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-#include "src/RSocketSetup.h"
-#include "src/RSocketParameters.h"
-#include "src/internal/RSocketConnectionManager.h"
-#include "src/internal/ScheduledRSocketResponder.h"
-#include "src/framing/FrameTransport.h"
-#include "src/statemachine/RSocketStateMachine.h"
-#include "src/RSocketRequester.h"
-#include "src/RSocketErrors.h"
-#include "src/RSocketStats.h"
+#include "rsocket/RSocketSetup.h"
+#include "rsocket/RSocketParameters.h"
+#include "rsocket/internal/RSocketConnectionManager.h"
+#include "rsocket/internal/ScheduledRSocketResponder.h"
+#include "rsocket/framing/FrameTransport.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
+#include "rsocket/RSocketRequester.h"
+#include "rsocket/RSocketErrors.h"
+#include "rsocket/RSocketStats.h"
 
 namespace rsocket {
 

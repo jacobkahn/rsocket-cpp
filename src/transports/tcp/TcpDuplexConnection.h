@@ -4,8 +4,8 @@
 
 #include <folly/io/async/AsyncSocket.h>
 
-#include "src/DuplexConnection.h"
-#include "src/RSocketStats.h"
+#include "rsocket/DuplexConnection.h"
+#include "rsocket/RSocketStats.h"
 #include "yarpl/flowable/Subscriber.h"
 
 namespace rsocket {

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <folly/Function.h>
-#include "src/DuplexConnection.h"
+#include "rsocket/DuplexConnection.h"
 
 namespace folly {
 class EventBase;

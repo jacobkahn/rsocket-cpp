@@ -6,11 +6,11 @@
 #include <cstddef>
 #include <iostream>
 
-#include "src/Payload.h"
-#include "src/internal/AllowanceSemaphore.h"
-#include "src/internal/Common.h"
-#include "src/statemachine/RSocketStateMachine.h"
-#include "src/statemachine/StreamStateMachineBase.h"
+#include "rsocket/Payload.h"
+#include "rsocket/internal/AllowanceSemaphore.h"
+#include "rsocket/internal/Common.h"
+#include "rsocket/statemachine/RSocketStateMachine.h"
+#include "rsocket/statemachine/StreamStateMachineBase.h"
 #include "yarpl/flowable/Subscription.h"
 
 namespace rsocket {

@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "src/Payload.h"
-#include "src/internal/Common.h"
+#include "rsocket/Payload.h"
+#include "rsocket/internal/Common.h"
 
 namespace rsocket {
 

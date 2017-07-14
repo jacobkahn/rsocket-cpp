@@ -4,7 +4,7 @@
 
 #include <folly/io/async/AsyncServerSocket.h>
 
-#include "src/ConnectionAcceptor.h"
+#include "rsocket/ConnectionAcceptor.h"
 
 namespace folly {
 class ScopedEventBaseThread;

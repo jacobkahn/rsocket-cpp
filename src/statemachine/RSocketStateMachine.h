@@ -5,13 +5,13 @@
 #include <list>
 #include <memory>
 
-#include "src/DuplexConnection.h"
-#include "src/Payload.h"
-#include "src/RSocketParameters.h"
-#include "src/framing/FrameProcessor.h"
-#include "src/internal/Common.h"
-#include "src/statemachine/StreamsFactory.h"
-#include "src/statemachine/StreamsWriter.h"
+#include "rsocket/DuplexConnection.h"
+#include "rsocket/Payload.h"
+#include "rsocket/RSocketParameters.h"
+#include "rsocket/framing/FrameProcessor.h"
+#include "rsocket/internal/Common.h"
+#include "rsocket/statemachine/StreamsFactory.h"
+#include "rsocket/statemachine/StreamsWriter.h"
 
 namespace rsocket {
 
